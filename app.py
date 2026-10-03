@@ -6356,8 +6356,7 @@ with col_left:
                             if _status == "completed" or _status == "error":
                                 ring_html = ""
                             elif _status == "spectrum_only":
-                                _tip = tr("sim_limit_tip").format(limit=f"{SIM_DISABLE_FROM:,}")
-                                ring_html = f"<div class='play-ring off' title='{_tip}'></div>"
+                                ring_html = ""      # no simulation from SIM_DISABLE_FROM muons on: no Play button, so no ring either
                             elif _status == "simulating":
                                 _pct = int(round(max(0.0, min(1.0, float(spec.get("sim_progress", 0.0)))) * 100))
                                 ring_html = f"<div class='play-ring' style='--p:{_pct}'><span>{_pct}%</span></div>"
