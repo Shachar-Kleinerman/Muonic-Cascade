@@ -651,9 +651,11 @@ st.markdown(f"""
     .block-container {{
         padding-top: 0.25rem !important;
         padding-bottom: 0.1rem !important;
-        padding-left: 0.95rem !important;
-        padding-right: 0.95rem !important;
-        max-width: 99.4% !important;
+        /* the page margin equals the header's (1.3rem) on both sides; the left one also holds the thin scrollbar of the
+           spectra list (8px bar + 6px gap) */
+        padding-left: calc(1.3rem + 14px) !important;
+        padding-right: 1.3rem !important;
+        max-width: 100% !important;
         height: 100vh !important;
         overflow: visible !important;
     }}
@@ -2446,6 +2448,104 @@ PARENT_UI_JS = r'''
             commitBridge('.st-key-_n_bridge input', Date.now() + ':' + (inc ? 1 : -1));
         }
     }, { passive: false, capture: true });
+
+    // ------------------------------------------------------------------ one-time hint: a pulsing ring around the language switch
+    // (about 3.6 s right after the page opens, so that visitors notice the language can be changed; once per page load)
+    if (!W.__langHintShown) {
+        var lhTries = 0;
+        var lhWait = setInterval(function () {
+            var g = D.querySelector('.st-key-lang_toggle [data-testid="stRadioGroup"]');
+            var gr = g ? g.getBoundingClientRect() : null;
+            if (++lhTries > 150) { clearInterval(lhWait); return; }
+            if (!gr || gr.width < 10) return;
+            clearInterval(lhWait);
+            W.__langHintShown = true;
+            var st = D.createElement('style');
+            st.textContent = '@keyframes muonLangPulse{0%{box-shadow:0 0 0 0 rgba(15,76,129,.55);opacity:1}' +
+                '70%{box-shadow:0 0 0 11px rgba(15,76,129,0);opacity:.75}100%{box-shadow:0 0 0 0 rgba(15,76,129,0);opacity:.35}}';
+            D.head.appendChild(st);
+            var ring = D.createElement('div');
+            ring.style.cssText = 'position:fixed;z-index:2000001;pointer-events:none;box-sizing:border-box;border:2px solid #0f4c81;' +
+                'border-radius:11px;animation:muonLangPulse 1.2s ease-out 3 both;';
+            D.body.appendChild(ring);
+            function place() {
+                var el = D.querySelector('.st-key-lang_toggle [data-testid="stRadioGroup"]');
+                if (!el) return;
+                var b = el.getBoundingClientRect();
+                ring.style.left = (b.left - 4) + 'px'; ring.style.top = (b.top - 4) + 'px';
+                ring.style.width = (b.width + 8) + 'px'; ring.style.height = (b.height + 8) + 'px';
+            }
+            place();
+            var follow = setInterval(place, 100);
+            function stop() {
+                clearInterval(follow); clearTimeout(endT); D.removeEventListener('pointerdown', stop, true);
+                if (ring.parentNode) ring.parentNode.removeChild(ring);
+                if (st.parentNode) st.parentNode.removeChild(st);
+            }
+            var endT = setTimeout(stop, 3700);
+            D.addEventListener('pointerdown', stop, true);      // any click ends the hint
+        }, 100);
+    }
+
+    // ------------------------------------------------------------------ thin scrollbar on the left edge of the spectra list
+    // (the list scrolls with the wheel, but without a visible scrollbar: this one shows it and can be clicked / dragged)
+    var SB_W = 8, SB_GAP = 6;
+    var sbTrack = D.createElement('div');
+    sbTrack.id = 'muon-vscroll';
+    sbTrack.style.cssText = 'position:fixed;z-index:50;width:' + SB_W + 'px;border-radius:4px;background:#dfe5ee;display:none;cursor:pointer;touch-action:none;';
+    var sbThumb = D.createElement('div');
+    sbThumb.style.cssText = 'position:absolute;left:0;right:0;border-radius:4px;background:#94a3b8;cursor:grab;touch-action:none;';
+    sbTrack.appendChild(sbThumb);
+    D.body.appendChild(sbTrack);
+    cleanups.push(function () { if (sbTrack.parentNode) sbTrack.parentNode.removeChild(sbTrack); });
+    function sbList() { return D.querySelector('.st-key-spectra_cards_scroll'); }
+    function sbSync() {
+        var s = sbList();
+        var r = s ? s.getBoundingClientRect() : null;
+        if (!s || r.width <= 0 || r.height <= 0 || s.scrollHeight <= s.clientHeight + 1) { sbTrack.style.display = 'none'; return; }
+        sbTrack.style.display = 'block';
+        sbTrack.style.left = (r.left - SB_W - SB_GAP) + 'px';
+        sbTrack.style.top = Math.round(r.top) + 'px';
+        sbTrack.style.height = Math.round(r.height) + 'px';
+        var th = Math.max(28, Math.round(r.height * s.clientHeight / s.scrollHeight));
+        var span = s.scrollHeight - s.clientHeight;
+        sbThumb.style.height = th + 'px';
+        sbThumb.style.top = Math.round((r.height - th) * (span > 0 ? s.scrollTop / span : 0)) + 'px';
+    }
+    var sbDrag = null;
+    function sbScrollTo(clientY, grab) {          // puts the thumb centre (or the grabbed point of it) at clientY
+        var s = sbList();
+        if (!s) return;
+        var tr = sbTrack.getBoundingClientRect(), th = sbThumb.offsetHeight;
+        var frac = Math.min(1, Math.max(0, (clientY - tr.top - grab) / Math.max(1, tr.height - th)));
+        return frac * (s.scrollHeight - s.clientHeight);
+    }
+    on(sbTrack, 'pointerdown', function (e) {
+        var s = sbList();
+        if (!s) return;
+        e.preventDefault();
+        if (e.target === sbThumb) {
+            sbDrag = { grab: e.clientY - sbThumb.getBoundingClientRect().top };
+            sbThumb.style.cursor = 'grabbing';
+            try { sbTrack.setPointerCapture(e.pointerId); } catch (err) {}
+        } else {                                      // click on the track: jump there
+            s.scrollTo({ top: sbScrollTo(e.clientY, sbThumb.offsetHeight / 2), behavior: 'smooth' });
+        }
+    });
+    on(sbTrack, 'pointermove', function (e) {
+        var s = sbList();
+        if (sbDrag && s) s.scrollTop = sbScrollTo(e.clientY, sbDrag.grab);
+    });
+    function sbEnd() { sbDrag = null; sbThumb.style.cursor = 'grab'; }
+    on(sbTrack, 'pointerup', sbEnd);
+    on(sbTrack, 'pointercancel', sbEnd);
+    on(sbTrack, 'mouseenter', function () { sbThumb.style.background = '#64748b'; });
+    on(sbTrack, 'mouseleave', function () { sbThumb.style.background = '#94a3b8'; });
+    on(D, 'scroll', sbSync, true);
+    on(W, 'resize', sbSync);
+    sbSync();
+    var sbTimer = setInterval(sbSync, 150);
+    cleanups.push(function () { clearInterval(sbTimer); });
 
     W.__muonUI = { destroy: function () { endGesture(); cleanups.forEach(function (fn) { fn(); }); cleanups = []; } };
 })();
