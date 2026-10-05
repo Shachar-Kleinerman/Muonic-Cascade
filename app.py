@@ -266,6 +266,7 @@ TRANSLATIONS = {
         "branching": "Branching Ratios",
         "ground_reached": "Ground state 1s<sub>1/2</sub> reached.",
         "no_transition": "No transition from this level occurs in this simulation.",
+        "no_transition_2s": "2s<sub>1/2</sub> has no single-photon (E1) decay to 1s<sub>1/2</sub> (Δl = 0): the muon stays here in this simulation.",
         "dist_delta": "Delta (single level + sublevel)",
         "dist_uniform": "Uniform (equal split over all sublevels of n)",
         "dist_uniform_short": "Uniform",
@@ -363,6 +364,7 @@ TRANSLATIONS = {
         "branching": "יחסי הסתעפות",
         "ground_reached": "הגענו למצב היסוד 1s<sub>1/2</sub>.",
         "no_transition": "אף מעבר מרמה זו לא מתרחש בסימולציה הזו.",
+        "no_transition_2s": "ל-2s<sub>1/2</sub> אין דעיכה בפוטון בודד (E1) ל-1s<sub>1/2</sub> (Δl = 0): המיואון נשאר כאן בסימולציה הזו.",
         "dist_delta": "Delta (single level + sublevel)",
         "dist_uniform": "Uniform (equal split over all sublevels of n)",
         "dist_uniform_short": "Uniform",
@@ -4127,6 +4129,7 @@ def render_unified_canvas_animator(payload):
         "rtl": st.session_state.lang == "HE",
         "ground_reached": tr("ground_reached"),
         "no_transition": tr("no_transition"),
+        "no_transition_2s": tr("no_transition_2s"),
         "font_scale": st.session_state.font_scale / 100.0
     }
     json_data = json.dumps(payload)
@@ -5422,7 +5425,14 @@ def render_unified_canvas_animator(payload):
                         cachedKeys.add(`${{st.from}}->${{st.to}}`);
                     }}
                 }}
-                doneCache = {{ photons: cachedPhotons, keys: cachedKeys }};
+                // where every muon really ended: 1s_1/2, or a state without a single-photon decay (2s_1/2)
+                const cachedEnds = {{}};
+                for (let m = 0; m < totalMuons; m++) {{
+                    const tj = sim.trajectories[m];
+                    const endState = tj.length ? tj[tj.length - 1].to : sim.start_level;
+                    cachedEnds[endState] = (cachedEnds[endState] || 0) + 1;
+                }}
+                doneCache = {{ photons: cachedPhotons, keys: cachedKeys, ends: cachedEnds }};
             }}
             const allPhotons = doneCache.photons;
             const allTraversedKeys = doneCache.keys;
@@ -5433,6 +5443,7 @@ def render_unified_canvas_animator(payload):
                 stepIdx: Math.max(0, lastTraj.length - 1),
                 activeStep: null,
                 currentState: '1s_1/2',
+                finalCounts: doneCache.ends,
                 flightProg: 1.0,
                 photonInFlight: false,
                 photonFadeInProg: 1.0,
@@ -5819,18 +5830,33 @@ def render_unified_canvas_animator(payload):
                 `Muon <b>#${{(st.muonIdx + 1).toLocaleString('en-US')}}</b>${{isoTxt}}: &nbsp;<b>${{htmlFrom}} → ${{htmlTo}}</b> &nbsp;` +
                 `(<i>P</i> = ${{st.activeStep.prob.toFixed(1)}}%, &nbsp;Δ<i>E</i> = <b>${{st.activeStep.energy.toFixed(2)}} keV</b>)`;
         }} else if (st.done) {{
+            // the muons end where the simulation really left them: 1s_1/2, or 2s_1/2 (no single-photon decay from there)
+            const fc = st.finalCounts || {{}};
+            const nTot = sim.num_muons;
+            const nGround = fc['1s_1/2'] || 0;
+            const stuck = Object.keys(fc).filter(k => k !== '1s_1/2');
+            const markMuon = (px, py, colour) => {{
+                ctx.beginPath();
+                ctx.arc(px, py, 10.5, 0, Math.PI * 2);
+                ctx.fillStyle = colour;
+                ctx.fill();
+                ctx.fillStyle = '#ffffff';
+                ctx.font = 'bold 11.5px Calibri, "Segoe UI", sans-serif';
+                ctx.textAlign = 'center';
+                ctx.fillText('μ⁻', px, py + 4);
+            }};
             const pGround = levelToScreen(0, 1);
-            ctx.beginPath();
-            ctx.arc(pGround.x, pGround.y, 10.5, 0, Math.PI * 2);
-            ctx.fillStyle = '#0f4c81';
-            ctx.fill();
-            ctx.fillStyle = '#ffffff';
-            ctx.font = 'bold 11.5px Calibri, "Segoe UI", sans-serif';
-            ctx.textAlign = 'center';
-            ctx.fillText('μ⁻', pGround.x, pGround.y + 4);
-            document.getElementById('statusStepText').innerHTML =
-                `<b>Cascade Complete</b> — Ground state 1s<sub>1/2</sub> (${{sim.num_muons.toLocaleString('en-US')}} μ⁻, ${{sim.total_photons_all.toLocaleString('en-US')}} 𝛾 photons)` +
-                `.`;
+            if (nGround > 0 || !stuck.length) markMuon(pGround.x, pGround.y, '#0f4c81');
+            stuck.forEach(k => {{
+                const c = sim.level_map[k];
+                if (c) {{ const p = levelToScreen(c.x_pos, c.n); markMuon(p.x, p.y, '#b45309'); }}
+            }});
+            const stuckTxt = stuck.map(k => `${{fc[k].toLocaleString('en-US')}} stayed in ${{fmtStateHTML(k)}}`).join('; ');
+            document.getElementById('statusStepText').innerHTML = stuck.length
+                ? `<b>Cascade Complete</b> — ${{nGround.toLocaleString('en-US')}} of ${{nTot.toLocaleString('en-US')}} μ⁻ reached the ground state 1s<sub>1/2</sub>; ${{stuckTxt}} (no single-photon decay from there) ` +
+                  `(${{sim.total_photons_all.toLocaleString('en-US')}} 𝛾 photons).`
+                : `<b>Cascade Complete</b> — Ground state 1s<sub>1/2</sub> (${{nTot.toLocaleString('en-US')}} μ⁻, ${{sim.total_photons_all.toLocaleString('en-US')}} 𝛾 photons)` +
+                  `.`;
         }}
 
         ctx.restore();
@@ -6052,7 +6078,7 @@ def render_unified_canvas_animator(payload):
         if (!list.length) {{
             const emptyMsg = (focusState === '1s_1/2')
                 ? ui.ground_reached
-                : ui.no_transition;
+                : (focusState === '2s_1/2' ? ui.no_transition_2s : ui.no_transition);
             inspectorBarEl.innerHTML = `<div><b>${{ui.branching}} (${{fmtStateHTML(focusState)}}):</b></div><div class="inspector-options-row"><span>${{emptyMsg}}</span></div>`;
             return;
         }}
