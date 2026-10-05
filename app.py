@@ -266,6 +266,7 @@ TRANSLATIONS = {
         "branching": "Branching Ratios",
         "ground_reached": "Ground state 1s<sub>1/2</sub> reached.",
         "no_transition": "No transition from this level occurs in this simulation.",
+        "mudirac_error": "MUDIRAC could not compute the level {level} of {name} with these settings.",
         "no_transition_2s": "2s<sub>1/2</sub> has no single-photon (E1) decay to 1s<sub>1/2</sub> (Δl = 0): the muon stays here in this simulation.",
         "dist_delta": "Delta (single level + sublevel)",
         "dist_uniform": "Uniform (equal split over all sublevels of n)",
@@ -364,6 +365,7 @@ TRANSLATIONS = {
         "branching": "יחסי הסתעפות",
         "ground_reached": "הגענו למצב היסוד 1s<sub>1/2</sub>.",
         "no_transition": "אף מעבר מרמה זו לא מתרחש בסימולציה הזו.",
+        "mudirac_error": "MUDIRAC לא הצליח לחשב את הרמה ⁦{level}⁩ של ⁦{name}⁩ עם ההגדרות האלה.",
         "no_transition_2s": "ל-2s<sub>1/2</sub> אין דעיכה בפוטון בודד (E1) ל-1s<sub>1/2</sub> (Δl = 0): המיואון נשאר כאן בסימולציה הזו.",
         "dist_delta": "Delta (single level + sublevel)",
         "dist_uniform": "Uniform (equal split over all sublevels of n)",
@@ -1038,6 +1040,19 @@ st.markdown(f"""
     .st-key-select_hint [data-testid="stAlert"] {{ min-height: calc(100vh - 70.8px - 17.9px) !important; align-items: center !important; }}
     .st-key-select_hint [data-testid="stAlertContainer"],
     .st-key-select_hint [data-testid="stAlert"] > div {{ justify-content: center !important; }}
+    /* "Computing cascade tree in background...": same box as above, but its top edge lies on the top edge of the first
+       spectrum tab (109.6 px) and its text is centred (English and Hebrew) */
+    .st-key-anim_wait_box {{ margin-top: 6.9px !important; }}
+    .st-key-anim_wait_box [data-testid="stAlert"] * {{ text-align: center !important; }}
+    .st-key-anim_wait_box [data-testid="stAlert"] {{
+        min-height: calc(100vh - 109.6px - 17.9px) !important;
+        display: flex !important; align-items: center !important; justify-content: center !important;
+    }}
+    .st-key-anim_wait_box [data-testid="stAlertContainer"],
+    .st-key-anim_wait_box [data-testid="stAlert"] > div {{ justify-content: center !important; }}
+    /* the two buttons above the simulator (current spectrum / all spectra): their centre line is the centre line of the
+       "Create new spectrum" button (34 px high, the two buttons are 28 px high: 3 px lower) */
+    .st-key-return_all_spectra_btn, .st-key-view_current_spectrum_btn {{ position: relative; top: 3px; }}
     /* tooltips are above everything, also above the fixed header band (z-index 2000000) */
     div:has(> [data-testid="stTooltipContent"]) {{ z-index: 2147483000 !important; }}
     /* MUDIRAC cannot run the chosen element with the chosen nuclear model: the button is faded and does nothing */
@@ -3251,7 +3266,19 @@ def enforce_selection_rules(level_name, transitions):
 
 
 class MudiracError(RuntimeError):
-    """MUDIRAC gave no result for a state. Nothing is ever substituted for it: the calculation stops with this message."""
+    """MUDIRAC gave no result for a state. Nothing is ever substituted for it: the calculation stops with this message.
+    level_txt / name_txt let the page word the message in the language that is shown (see spec_error_text)."""
+    def __init__(self, message, level_txt="", name_txt=""):
+        super().__init__(message)
+        self.level_txt, self.name_txt = level_txt, name_txt
+
+
+def spec_error_text(spec):
+    """The error shown for a spectrum, in the current language (MUDIRAC failures are worded from the translation table)."""
+    args = spec.get("mudirac_error")
+    if args:
+        return tr("mudirac_error").format(level=args[0], name=args[1])
+    return spec.get("status_text", "Error")
 
 
 def safe_calculate_transitions(level_name, element, lock, _cancel=None, **physics_kwargs):
@@ -3274,14 +3301,8 @@ def safe_calculate_transitions(level_name, element, lock, _cancel=None, **physic
             level_name, element=element, print_table=False, **physics_kwargs
         )
         if not transitions:
-            raise MudiracError(
-                f"MUDIRAC could not compute the level {format_level_unicode(level_name)} of "
-                f"{spec_name_unicode({'element': element, 'isotope': iso})} with these settings "
-                f"(nuclear model {physics_kwargs.get('nuclear_model')}, "
-                f"vacuum polarization {'on' if physics_kwargs.get('uehling_correction') else 'off'}, "
-                f"screening {'on' if physics_kwargs.get('electronic_config') else 'off'}); MUDIRAC's solver did not "
-                f"converge for this state, and no substitute is used. Changing a correction or the nuclear model is "
-                f"a different physical setting and is left to you.")
+            _lv, _nm = format_level_unicode(level_name), spec_name_unicode({'element': element, 'isotope': iso})
+            raise MudiracError(f"MUDIRAC could not compute the level {_lv} of {_nm} with these settings.", _lv, _nm)
         return enforce_selection_rules(level_name, transitions)
 
 def plan_isotopes(element, isotope):
@@ -3771,7 +3792,9 @@ def unified_background_worker(spec_entry, run_token, lock, shared_cache):
         exc = _worker_once(spec_entry, run_token, lock, shared_cache)
     if exc is not None and not cancelled():
         spec_entry["status"] = "error"
-        spec_entry["status_text"] = f"Error: {type(exc).__name__}: {exc}"
+        # a MudiracError already is a complete sentence for the user; other failures keep their technical prefix
+        spec_entry["status_text"] = str(exc) if isinstance(exc, MudiracError) else f"Error: {type(exc).__name__}: {exc}"
+        spec_entry["mudirac_error"] = (exc.level_txt, exc.name_txt) if isinstance(exc, MudiracError) else None
 
 
 def start_simulation_thread(spec_entry):
@@ -6519,7 +6542,7 @@ with col_left:
                         if not spec.get("notified_done", False):
                             spec["notified_done"] = True
                             needs_full_app_rerun = True
-                        st.error(spec.get("status_text", "Error"))
+                        st.error(spec_error_text(spec))
 
 
         if needs_full_app_rerun:
@@ -6592,11 +6615,12 @@ with col_right:
             args=(active_anim_spec["id"],)
         )
         if active_anim_spec.get("status") in ("running", "simulating"):
-            st.info(tr("anim_computing"))
+            with st.container(key="anim_wait_box"):
+                st.info(tr("anim_computing"))
         elif active_anim_spec.get("status") == "completed" and active_anim_spec.get("payload"):
             render_unified_canvas_animator(active_anim_spec["payload"])
         else:
-            st.error(active_anim_spec.get("status_text", "Error"))
+            st.error(spec_error_text(active_anim_spec))
 
     # ==========================================================================
     # VIEW B (DEFAULT): COMBINED STATIC SPECTRA VIEW
