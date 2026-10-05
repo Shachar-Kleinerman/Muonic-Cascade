@@ -1548,7 +1548,9 @@ st.markdown(f"""
     {_TOP_ROW} > [data-testid="stColumn"]:nth-child(3) {{ width: calc((100% - 12px) * 0.108) !important; }}
     {_TOP_ROW} > [data-testid="stColumn"]:nth-child(4) {{ width: calc((100% - 12px) * 0.142) !important; }}
     {_TOP_ROW} > [data-testid="stColumn"]:nth-child(5) {{ width: calc((100% - 12px) * 0.108) !important; }}
-    {_TOP_ROW} > [data-testid="stColumn"]:nth-child(6) {{ width: max-content !important; flex-shrink: 0 !important; }}
+    /* the corrections column has the same fixed width in every language (it fits the longest, English, captions), so the
+       other columns - spread with space-between - never move when the language changes */
+    {_TOP_ROW} > [data-testid="stColumn"]:nth-child(6) {{ width: 12.5rem !important; flex-shrink: 0 !important; }}
     /* titles: one look and one height everywhere in the row */
     {_TOP_ROW} [data-testid="stWidgetLabel"] {{ min-height: 0 !important; height: 16px !important; margin: 0 0 2px 0 !important; padding: 0 !important; }}
     {_TOP_ROW} [data-testid="stWidgetLabel"] p {{ line-height: 16px !important; margin: 0 !important; }}
