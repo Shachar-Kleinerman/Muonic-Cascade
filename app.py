@@ -2449,7 +2449,7 @@ PARENT_UI_JS = r'''
         }
     }, { passive: false, capture: true });
 
-    // ------------------------------------------------------------------ one-time hint: a pulsing ring around the language switch
+    // ------------------------------------------------------------------ one-time hint: a light running around the frame of the language switch
     // (about 3.6 s right after the page opens, so that visitors notice the language can be changed; once per page load)
     if (!W.__langHintShown) {
         var lhTries = 0;
@@ -2460,20 +2460,30 @@ PARENT_UI_JS = r'''
             if (!gr || gr.width < 10) return;
             clearInterval(lhWait);
             W.__langHintShown = true;
+            // a bright stretch of the frame runs twice around the whole switch (3.6 s), over a faint full outline
             var st = D.createElement('style');
-            st.textContent = '@keyframes muonLangPulse{0%{box-shadow:0 0 0 0 rgba(15,76,129,.55);opacity:1}' +
-                '70%{box-shadow:0 0 0 11px rgba(15,76,129,0);opacity:.75}100%{box-shadow:0 0 0 0 rgba(15,76,129,0);opacity:.35}}';
+            st.textContent = '@keyframes muonLangRun{from{stroke-dashoffset:0}to{stroke-dashoffset:-100}}' +
+                '@keyframes muonLangFade{0%{opacity:0}8%{opacity:1}90%{opacity:1}100%{opacity:0}}';
             D.head.appendChild(st);
             var ring = D.createElement('div');
-            ring.style.cssText = 'position:fixed;z-index:2000001;pointer-events:none;box-sizing:border-box;border:2px solid #0f4c81;' +
-                'border-radius:11px;animation:muonLangPulse 1.2s ease-out 3 both;';
+            ring.style.cssText = 'position:fixed;z-index:2000001;pointer-events:none;animation:muonLangFade 3.6s ease both;';
+            ring.innerHTML = '<svg width="100%" height="100%" style="position:absolute;left:0;top:0;overflow:visible">' +
+                '<rect class="t" fill="none" stroke="rgba(15,76,129,.22)" stroke-width="1.5" pathLength="100"/>' +
+                '<rect class="d" fill="none" stroke="#0f4c81" stroke-width="2.6" stroke-linecap="round" pathLength="100" ' +
+                'stroke-dasharray="24 76" style="filter:drop-shadow(0 0 3px rgba(15,76,129,.65));animation:muonLangRun 1.8s linear 2 both"/></svg>';
             D.body.appendChild(ring);
+            var ringRects = ring.querySelectorAll('rect');
             function place() {
                 var el = D.querySelector('.st-key-lang_toggle [data-testid="stRadioGroup"]');
                 if (!el) return;
-                var b = el.getBoundingClientRect();
-                ring.style.left = (b.left - 4) + 'px'; ring.style.top = (b.top - 4) + 'px';
-                ring.style.width = (b.width + 8) + 'px'; ring.style.height = (b.height + 8) + 'px';
+                var b = el.getBoundingClientRect(), pad = 4, w = b.width + 2 * pad, h = b.height + 2 * pad;
+                ring.style.left = (b.left - pad) + 'px'; ring.style.top = (b.top - pad) + 'px';
+                ring.style.width = w + 'px'; ring.style.height = h + 'px';
+                for (var i = 0; i < ringRects.length; i++) {
+                    ringRects[i].setAttribute('x', 1.5); ringRects[i].setAttribute('y', 1.5);
+                    ringRects[i].setAttribute('width', w - 3); ringRects[i].setAttribute('height', h - 3);
+                    ringRects[i].setAttribute('rx', 11); ringRects[i].setAttribute('ry', 11);
+                }
             }
             place();
             var follow = setInterval(place, 100);
