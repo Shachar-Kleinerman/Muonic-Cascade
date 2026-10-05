@@ -283,14 +283,15 @@ TRANSLATIONS = {
         "nuclear_model": "Nuclear Model",
         "need_other_isotope": "not available for the chosen isotope: choose another isotope first",
         "need_sphere": "SPHERE requires the measured nuclear charge radius of this isotope, which is not available.",
-        "need_fermi": "No measured radius is available for this isotope.\nFERMI2 then uses R = 1.2·A^(1/3) fm,\nwhich is possible only with vacuum polarization (QED) switched off.",
+        "need_fermi": "No measured radius is available for this isotope.\nFERMI2 then uses R = 1.2·A^(1/3) fm,\nwhich is possible only with vacuum polarization (Uehling) switched off.",
         "model_off_point": "POINT is not available at this atomic number: MUDIRAC's solver does not converge for the p1/2 states of a point nucleus at this atomic number.",
         "need_point": "Not available with POINT: MUDIRAC's solver does not converge for the p1/2 states of a point nucleus at this atomic number.",
         "model_off_sphere": "SPHERE requires a measured nuclear charge radius, which is not available for the selected isotope.",
-        "model_off_fermi": "With QED on, FERMI2 requires a measured nuclear charge radius, which is not available for the selected isotope.",
-        "mudirac_cannot_run": "MUDIRAC cannot run this element with this nuclear model (SPHERE needs a nuclear charge radius that MUDIRAC does not have for it; FERMI2 without one works only with vacuum polarization / QED switched off). Choose POINT, change the QED setting, or choose another isotope or element.",
-        "qed_label": "Vacuum Polarization (QED)",
-        "qed_help": "Quantum Electrodynamics (Uehling potential) correction: accounts for virtual electron-positron pairs screening the nuclear charge at short distances.",
+        "model_off_fermi": "With vacuum polarization on, FERMI2 requires a measured nuclear charge radius, which is not available for the selected isotope.",
+        "mudirac_cannot_run": "MUDIRAC cannot run this element with this nuclear model (SPHERE needs a nuclear charge radius that MUDIRAC does not have for it; FERMI2 without one works only with vacuum polarization switched off). Choose POINT, change the vacuum-polarization setting, or choose another isotope or element.",
+        "qed_label": "Vacuum Polarization (Uehling)",
+        "qed_card_label": "Vacuum Polarization",      # the spectrum tab is too narrow for the full label
+        "qed_help": "First-order vacuum-polarization correction to the potential (Uehling potential): virtual electron-positron pairs modify the nuclear Coulomb field at short distances. It is the only quantum-electrodynamic correction included (no self-energy or other terms).",
         "screening_label": "Electronic Screening",
         "screening_help": "Accounts for the surrounding atomic electron cloud that partially screens the nuclear charge, shifting outer muonic energy levels.",
         "recoil_label": "Nuclear Recoil",
@@ -382,15 +383,16 @@ TRANSLATIONS = {
         "nuclear_model": "מודל גרעין",
         "need_other_isotope": "אינו זמין לאיזוטופ שנבחר: בחר קודם איזוטופ אחר",
         "need_sphere": "המודל הכדורי (SPHERE) דורש את רדיוס המטען הגרעיני המדוד של האיזוטופ, אשר אינו זמין.",
-        "need_fermi": "לאיזוטופ אין רדיוס מדוד.\nב-FERMI2 משתמשים אז ב-R = 1.2·A^(1/3) fm,\nוהדבר אפשרי רק כשקיטוב הריק (QED) כבוי.",
+        "need_fermi": "לאיזוטופ אין רדיוס מדוד.\nב-FERMI2 משתמשים אז ב-R = 1.2·A^(1/3) fm,\nוהדבר אפשרי רק כשקיטוב הריק (Uehling) כבוי.",
         "model_off_point": "המודל הנקודתי (POINT) אינו זמין במספר אטומי זה: הפותר של MUDIRAC אינו מתכנס עבור מצבי p1/2 של גרעין נקודתי.",
         "need_point": "אינו זמין במודל הנקודתי (POINT): הפותר של MUDIRAC אינו מתכנס עבור מצבי p1/2 של גרעין נקודתי במספר אטומי זה.",
         "model_off_sphere": "המודל הכדורי (SPHERE) דורש רדיוס מטען גרעיני מדוד, אשר אינו זמין לאיזוטופ שנבחר.",
-        "model_off_fermi": "כשה-QED דלוק, FERMI2 דורש רדיוס מטען גרעיני מדוד, אשר אינו זמין לאיזוטופ שנבחר.",
+        "model_off_fermi": "כשקיטוב הריק דלוק, FERMI2 דורש רדיוס מטען גרעיני מדוד, אשר אינו זמין לאיזוטופ שנבחר.",
         # English words are isolated (LRI ... PDI) and the whole text is a right-to-left paragraph (RLI ... PDI)
-        "mudirac_cannot_run": "⁧⁦MUDIRAC⁩ לא יכול להריץ יסוד זה עם מודל הגרעין שנבחר (המודל הכדורי דורש רדיוס מטען גרעיני שאין ל-⁦MUDIRAC⁩ עבורו, ו-⁦FERMI2⁩ בלי רדיוס כזה עובד רק כשקיטוב הריק ⁦(QED)⁩ כבוי). בחר ⁦POINT⁩, שנה את הגדרת ה-⁦QED⁩, או בחר איזוטופ או יסוד אחר.⁩",
-        "qed_label": "קיטוב הריק (QED)",
-        "qed_help": "תיקון אלקטרודינמיקה קוונטית (פוטנציאל Uehling): מתחשב ביצירת זוגות וירטואליים של אלקטרון-פוזיטרון סביב הגרעין המשנים את הפוטנציאל החשמלי שמרגיש המיואון.",
+        "mudirac_cannot_run": "⁧⁦MUDIRAC⁩ לא יכול להריץ יסוד זה עם מודל הגרעין שנבחר (המודל הכדורי דורש רדיוס מטען גרעיני שאין ל-⁦MUDIRAC⁩ עבורו, ו-⁦FERMI2⁩ בלי רדיוס כזה עובד רק כשקיטוב הריק כבוי). בחר ⁦POINT⁩, שנה את הגדרת קיטוב הריק, או בחר איזוטופ או יסוד אחר.⁩",
+        "qed_label": "קיטוב הריק (Uehling)",
+        "qed_card_label": "קיטוב הריק (Uehling)",
+        "qed_help": "תיקון קיטוב הריק מסדר ראשון לפוטנציאל (פוטנציאל Uehling): זוגות וירטואליים של אלקטרון-פוזיטרון משנים את השדה הקולוני של הגרעין במרחקים קצרים. זהו תיקון האלקטרודינמיקה הקוונטית היחיד שנכלל (בלי self-energy או איברים נוספים).",
         "screening_label": "מיסוך אלקטרוני",
         "screening_help": "מתחשב בענן האלקטרונים של האטום הממסך חלקית את מטען הגרעין ומשפיע על רמות האנרגיה של המיואון (בעיקר בקליפות החיצוניות).",
         "recoil_label": "רתע גרעיני",
@@ -507,7 +509,8 @@ def format_level_sub_btn(level_name):
 PAUSE_ICON = ("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 40'>"
               "<rect x='9' y='7' width='8' height='26' rx='2' fill='white'/><rect x='23' y='7' width='8' height='26' rx='2' fill='white'/></svg>")
 PERIODIC_TABLE_BOX_HEIGHT = 700   # the table scrolls inside this box; the dialog itself never scrolls
-SIM_DISABLE_FROM = 5000   # from this many muons on: exact spectrum only, no simulation (keeps the page responsive)
+MAX_START_N = 8           # highest starting shell offered: the MUDIRAC paper's examples stop at n = 5-6; above n = 7 our own runs start to fail
+SIM_DISABLE_FROM = 5000  # from this many muons on: exact spectrum only, no simulation (keeps the page responsive)
 MAX_ANIM_MUONS = SIM_DISABLE_FROM  # every muon below the limit is simulated
 
 # Isotope selector lists and natural abundances: NUBASE2020 (IAEA-AMDC), generated by build_isotope_data.py.
@@ -589,9 +592,7 @@ def is_sublevel_allowed_for_element(level_name, element):
     """Checks whether a starting sublevel is physically allowed for cascade."""
     if level_name in ("1s_1/2", "2s_1/2"):
         return False
-    z_val = ELEMENT_INFO.get(element, (26, "", ""))[0]
-    n_val = mc.get_n(level_name)
-    if z_val <= 2 and n_val >= 11:
+    if mc.get_n(level_name) > MAX_START_N:
         return False
     return True
 
@@ -1044,6 +1045,8 @@ st.markdown(f"""
        spectrum tab (109.6 px) and its text is centred (English and Hebrew) */
     .st-key-anim_wait_box {{ margin-top: 6.9px !important; }}
     .st-key-anim_wait_box [data-testid="stAlert"] * {{ text-align: center !important; }}
+    /* Hebrew: the sentence runs right to left, so its three dots stand at the left end */
+    .st-key-anim_wait_box [data-testid="stAlert"] p {{ direction: {'rtl' if st.session_state.lang == 'HE' else 'ltr'} !important; unicode-bidi: isolate; }}
     .st-key-anim_wait_box [data-testid="stAlert"] {{
         min-height: calc(100vh - 109.6px - 17.9px) !important;
         display: flex !important; align-items: center !important; justify-content: center !important;
@@ -1567,7 +1570,7 @@ st.markdown(f"""
     {_TOP_ROW} > [data-testid="stColumn"]:nth-child(5) {{ width: calc((100% - 12px) * 0.108) !important; }}
     /* the corrections column has the same fixed width in every language (it fits the longest, English, captions), so the
        other columns - spread with space-between - never move when the language changes */
-    {_TOP_ROW} > [data-testid="stColumn"]:nth-child(6) {{ width: 12.5rem !important; flex-shrink: 0 !important; }}
+    {_TOP_ROW} > [data-testid="stColumn"]:nth-child(6) {{ width: 14rem !important; flex-shrink: 0 !important; }}
     /* titles: one look and one height everywhere in the row */
     {_TOP_ROW} [data-testid="stWidgetLabel"] {{ min-height: 0 !important; height: 16px !important; margin: 0 0 2px 0 !important; padding: 0 !important; }}
     {_TOP_ROW} [data-testid="stWidgetLabel"] p {{ line-height: 16px !important; margin: 0 !important; }}
@@ -3877,7 +3880,7 @@ def render_dialog_body():
 
     # initial level: the title above the n box, and below it (delta distribution only) the sublevel box
     current_n = mc.get_n(ep["start_level"])
-    max_allowed_n = 10 if ELEMENT_INFO.get(ep["element"], (26, "", ""))[0] <= 2 else 14
+    max_allowed_n = MAX_START_N
     allowed_n_options = list(range(2, max_allowed_n + 1))
     if current_n not in allowed_n_options:
         current_n = allowed_n_options[-1]
@@ -6457,7 +6460,7 @@ with col_left:
                     with c_summary:
                         with st.container(key=f"spectrum_summary_{spec['id']}"):
                             correction_lines = (
-                                ("uehling", "qed_label"),
+                                ("uehling", "qed_card_label"),
                                 ("screening", "screening_label"),
                                 ("red_mass", "recoil_label"),
                             )

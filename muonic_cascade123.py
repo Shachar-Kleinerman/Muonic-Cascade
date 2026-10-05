@@ -59,6 +59,11 @@ live_cache = {}
 # energy_damp only changes how the solver iterates, not the physics (checked: converged energies agree to ~1e-9).
 DAMPING_LADDER = [None, 0.3, 0.2, 0.15]
 
+# What is tried, in this order, when MUDIRAC's solver does not give a complete result for a level. Every step changes only
+# how the solver iterates (MUDIRAC keywords.pdf: max_E_iter = most iterations of the energy search, default 100 - "increase
+# for slow convergences that are however progressing"; energy_damp = step damping, default 0.5), never the physics.
+RETRY_STEPS = [{}, {"max_E_iter": 1000}] + [{"energy_damp": d} for d in DAMPING_LADDER if d is not None]
+
 BOHR_FM = 52917.721067        # 1 atomic unit of length in fm (MUDIRAC writes radii in atomic units)
 WF_POINTS = 400               # samples kept per radial wavefunction (uniform in r, linear interpolation of MUDIRAC's own grid)
 
@@ -319,6 +324,32 @@ def plot_wavefunction(state_filename):
     return plot_filename
 
 
+def e1_allowed_line(line):
+    """line = 'TARGET-SOURCE' in MUDIRAC codes (e.g. 'O8-R6'). True if the electric-dipole selection rules allow it
+    (Delta l = +-1, |Delta j| <= 1; MUDIRAC paper, Sec. 2.3). An unknown line counts as allowed (never ignored)."""
+    def lj(code):
+        m = re.match(r"(\d+)([a-z])_(\d+)/2$", inverse_mudirac_dict[code])
+        return l_symbols.index(m.group(2)), int(m.group(3)) / 2
+    try:
+        tgt, src = line.split("-")
+        (l1, j1), (l2, j2) = lj(tgt), lj(src)
+    except (ValueError, KeyError, AttributeError):
+        return True
+    return abs(l1 - l2) == 1 and abs(j1 - j2) <= 1
+
+
+def skipped_allowed_lines(input_filename):
+    """The dipole-allowed lines MUDIRAC dropped from a run ("Convergence of one state failed ... skipping"). MUDIRAC
+    still writes the other lines, but a branching ratio needs the rates of ALL allowed decay channels of the level."""
+    log_path = os.path.splitext(input_filename)[0] + ".log"
+    if not os.path.exists(log_path):
+        return []
+    with open(log_path, errors="ignore") as fh:
+        log = fh.read()
+    names = re.findall(r"failed for line (\S+), skipping", log) + re.findall(r"Skipping line (\S+) because", log)
+    return sorted({n for n in names if e1_allowed_line(n)})
+
+
 def calculate_branching_ratios(source_level, element="C", print_table=True, **kwargs):
     """
     Calculates the normalized transition probabilities (Branching Ratios) 
@@ -343,11 +374,10 @@ def calculate_branching_ratios(source_level, element="C", print_table=True, **kw
     #    repeated with a smaller energy damping: a purely numerical solver setting, the physics stays exactly the same.
     #    Nothing else is ever substituted: if MUDIRAC gives no result, the result is empty and the caller must say so.
     res = None
-    for damp in DAMPING_LADDER:
+    for step in RETRY_STEPS:
         run_kwargs = dict(kwargs)
         run_kwargs.setdefault("output", 2)
-        if damp is not None:
-            run_kwargs["energy_damp"] = damp
+        run_kwargs.update(step)
         input_filename = create_mudirac_input(
             level_name=source_level,
             target="ALL_LOWER",
@@ -356,6 +386,11 @@ def calculate_branching_ratios(source_level, element="C", print_table=True, **kw
             **run_kwargs
         )
         res = parse_mudirac_xr(input_filename, verbose=False) if input_filename else None
+        if res and skipped_allowed_lines(input_filename):
+            # an allowed decay channel is missing: the rates would be normalised over fewer channels and the branching
+            # ratios would be wrong. Like the MUDIRAC paper (lines that did not succeed are left out), no complete result
+            # exists for this level with these settings; the next (smaller) damping is tried, then it is "no result".
+            res = None
         if res:
             harvest_wavefunctions(input_filename, element, kwargs)
         # 6. Clean up every temporary MUDIRAC file of this run (.in, .xr.out, .log, .err, state and matrix files)
@@ -367,8 +402,8 @@ def calculate_branching_ratios(source_level, element="C", print_table=True, **kw
                 except OSError:
                     pass
         if res:
-            if damp is not None and print_table:
-                print(f"-> converged with energy_damp = {damp}")
+            if step and print_table:
+                print(f"-> converged with the solver setting {step}")
             break
 
     transitions = []
