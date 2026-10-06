@@ -6,6 +6,9 @@ import random
 import matplotlib.pyplot as plt
 import numpy as np
 
+# True: the decays of a level include the transitions to the s and p states of the SAME shell (see create_mudirac_input)
+INCLUDE_SAME_SHELL = True
+
 # Directory where all generated MUDIRAC files and plots will be saved
 OUTPUT_DIR = "simulation_outputs"
 os.makedirs(OUTPUT_DIR, exist_ok=True)
@@ -135,12 +138,23 @@ def create_mudirac_input(level_name, target="ALL_LOWER", verbose=True, **kwargs)
             print("Error: Level 1s_1/2 is the ground state and has no lower levels!")
             return None
 
-        prev_n = source_n - 1
-        highest_target = f"{shell_letters[prev_n]}{2*prev_n - 1}"
-        target_code = "K1" if prev_n == 1 else f"K1:{highest_target}"
+        # every state of the lower shells, plus the s and p states of the source's OWN shell. MUDIRAC itself drops the
+        # lines whose energy is not positive (a state above the source), so what remains are the downward dipole
+        # transitions - also those inside the shell (2s -> 2p, 4s -> 4p ... in heavy atoms, where the finite nuclear size
+        # lifts the s states above the p states; the MUDIRAC paper's own gold spectrum has such lines: N3-N1, N2-N1 in
+        # Fig. 7, O2-O1 and O3-O1 in the text). Same-shell lines into d, f, g ... states are not requested: they connect
+        # nearly degenerate states, and measured with MUDIRAC they carry at most 0.03 % of a level's decay (uranium, the
+        # heaviest case tried; < 0.005 % in lead, ~1e-14 in helium).
+        lower = "K1" if source_n == 2 else f"K1:{shell_letters[source_n - 1]}{2*(source_n - 1) - 1}"
+        parts = [f"{lower}-{code}"]
+        if INCLUDE_SAME_SHELL:
+            parts += [f"{shell_letters[source_n]}{i}-{code}" for i in (1, 2, 3) if f"{shell_letters[source_n]}{i}" != code]
+        target_code = None
+        xr_lines = ",".join(parts)
 
     elif target in mudirac_dict:
         target_code = mudirac_dict[target]
+        xr_lines = f"{target_code}-{code}"
 
     else:
         print(f'Error: Target "{target}" not found in dictionary!')
@@ -173,7 +187,7 @@ def create_mudirac_input(level_name, target="ALL_LOWER", verbose=True, **kwargs)
 
     # 7. Write the transition command and physical parameters to the MUDIRAC input file
     with open(filename, "w") as file:
-        file.write(f"xr_lines: {target_code}-{code}\n")
+        file.write(f"xr_lines: {xr_lines}\n")
         for key, value in params.items():
             if isinstance(value, bool):
                 val_str = "TRUE" if value else "FALSE"
@@ -182,7 +196,7 @@ def create_mudirac_input(level_name, target="ALL_LOWER", verbose=True, **kwargs)
             file.write(f"{key}: {val_str}\n")
 
     if verbose:
-        print(f'Created "{filename}" for element: {element_name}, transitions: {target_code}-{code}')
+        print(f'Created "{filename}" for element: {element_name}, transitions: {xr_lines}')
 
     # 8. Execute the MUDIRAC binary and verify successful completion
     try:
@@ -350,6 +364,16 @@ def skipped_allowed_lines(input_filename):
     return sorted({n for n in names if e1_allowed_line(n)})
 
 
+def run_was_clean(input_filename):
+    """True if the MUDIRAC log of this run shows no error and no state that failed to converge."""
+    log_path = os.path.splitext(input_filename)[0] + ".log"
+    if not os.path.exists(log_path):
+        return False
+    with open(log_path, errors="ignore") as fh:
+        log = fh.read()
+    return "Calculation completed" in log and "[Err]" not in log and "failed" not in log
+
+
 def calculate_branching_ratios(source_level, element="C", print_table=True, **kwargs):
     """
     Calculates the normalized transition probabilities (Branching Ratios) 
@@ -374,6 +398,7 @@ def calculate_branching_ratios(source_level, element="C", print_table=True, **kw
     #    repeated with a smaller energy damping: a purely numerical solver setting, the physics stays exactly the same.
     #    Nothing else is ever substituted: if MUDIRAC gives no result, the result is empty and the caller must say so.
     res = None
+    clean_but_empty = False       # MUDIRAC ran without any failure and found no downward dipole line (e.g. 2s in muonic H)
     for step in RETRY_STEPS:
         run_kwargs = dict(kwargs)
         run_kwargs.setdefault("output", 2)
@@ -386,6 +411,8 @@ def calculate_branching_ratios(source_level, element="C", print_table=True, **kw
             **run_kwargs
         )
         res = parse_mudirac_xr(input_filename, verbose=False) if input_filename else None
+        if input_filename and not res and run_was_clean(input_filename):
+            clean_but_empty = True
         if res and skipped_allowed_lines(input_filename):
             # an allowed decay channel is missing: the rates would be normalised over fewer channels and the branching
             # ratios would be wrong. Like the MUDIRAC paper (lines that did not succeed are left out), no complete result
@@ -405,6 +432,8 @@ def calculate_branching_ratios(source_level, element="C", print_table=True, **kw
             if step and print_table:
                 print(f"-> converged with the solver setting {step}")
             break
+        if clean_but_empty:
+            break                 # nothing failed: more attempts cannot create a line that does not exist
 
     transitions = []
     total_rate = 0.0
@@ -442,8 +471,9 @@ def calculate_branching_ratios(source_level, element="C", print_table=True, **kw
     # 10. Store in cache only if valid transitions were found
     if transitions:
         live_cache[cache_key] = transitions
-
-    return transitions
+        return transitions
+    # no line: [] = MUDIRAC ran cleanly and the level has no downward dipole decay; None = MUDIRAC gave no (complete) result
+    return [] if clean_but_empty else None
 
 
 def run_monte_carlo_cascade(start_level="7i_13/2", element="C", num_muons=10000, **kwargs):

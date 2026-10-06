@@ -82,7 +82,6 @@ if "editor_params" not in st.session_state:
         "nuclear_model": "FERMI2",
         "uehling": True,
         "screening": True,
-        "red_mass": True,
     }
 for _k, _v in (("distribution", "statistical"), ("isotope", None)):
     st.session_state.editor_params.setdefault(_k, _v)
@@ -267,7 +266,6 @@ TRANSLATIONS = {
         "ground_reached": "Ground state 1s<sub>1/2</sub> reached.",
         "no_transition": "No transition from this level occurs in this simulation.",
         "mudirac_error": "MUDIRAC could not compute the level {level} of {name} with these settings.",
-        "no_transition_2s": "2s<sub>1/2</sub> has no single-photon (E1) decay to 1s<sub>1/2</sub> (Δl = 0): the muon stays here in this simulation.",
         "dist_delta": "Delta (single level + sublevel)",
         "dist_uniform": "Uniform (equal split over all sublevels of n)",
         "dist_uniform_short": "Uniform",
@@ -291,11 +289,9 @@ TRANSLATIONS = {
         "mudirac_cannot_run": "MUDIRAC cannot run this element with this nuclear model (SPHERE needs a nuclear charge radius that MUDIRAC does not have for it; FERMI2 without one works only with vacuum polarization switched off). Choose POINT, change the vacuum-polarization setting, or choose another isotope or element.",
         "qed_label": "Vacuum Polarization (Uehling)",
         "qed_card_label": "Vacuum Polarization",      # the spectrum tab is too narrow for the full label
-        "qed_help": "First-order vacuum-polarization correction to the potential (Uehling potential): virtual electron-positron pairs modify the nuclear Coulomb field at short distances. It is the only quantum-electrodynamic correction included (no self-energy or other terms).",
+        "qed_help": "First-order vacuum-polarization correction to the potential (Uehling potential): virtual electron-positron pairs modify the nuclear Coulomb field at short distances.",
         "screening_label": "Electronic Screening",
         "screening_help": "Accounts for the surrounding atomic electron cloud that partially screens the nuclear charge, shifting outer muonic energy levels.",
-        "recoil_label": "Nuclear Recoil",
-        "recoil_help": "Accounts for the finite mass of the nucleus by using the reduced mass of the muon-nucleus system around their common center of mass.",
         "initial_level_row_label": "Initial Level",
         "create_run": "Create",
         "update_run": "Update",
@@ -367,7 +363,6 @@ TRANSLATIONS = {
         "ground_reached": "הגענו למצב היסוד 1s<sub>1/2</sub>.",
         "no_transition": "אף מעבר מרמה זו לא מתרחש בסימולציה הזו.",
         "mudirac_error": "MUDIRAC לא הצליח לחשב את הרמה ⁦{level}⁩ של ⁦{name}⁩ עם ההגדרות האלה.",
-        "no_transition_2s": "ל-2s<sub>1/2</sub> אין דעיכה בפוטון בודד (E1) ל-1s<sub>1/2</sub> (Δl = 0): המיואון נשאר כאן בסימולציה הזו.",
         "dist_delta": "Delta (single level + sublevel)",
         "dist_uniform": "Uniform (equal split over all sublevels of n)",
         "dist_uniform_short": "Uniform",
@@ -392,11 +387,9 @@ TRANSLATIONS = {
         "mudirac_cannot_run": "⁧⁦MUDIRAC⁩ לא יכול להריץ יסוד זה עם מודל הגרעין שנבחר (המודל הכדורי דורש רדיוס מטען גרעיני שאין ל-⁦MUDIRAC⁩ עבורו, ו-⁦FERMI2⁩ בלי רדיוס כזה עובד רק כשקיטוב הריק כבוי). בחר ⁦POINT⁩, שנה את הגדרת קיטוב הריק, או בחר איזוטופ או יסוד אחר.⁩",
         "qed_label": "קיטוב הריק (Uehling)",
         "qed_card_label": "קיטוב הריק (Uehling)",
-        "qed_help": "תיקון קיטוב הריק מסדר ראשון לפוטנציאל (פוטנציאל Uehling): זוגות וירטואליים של אלקטרון-פוזיטרון משנים את השדה הקולוני של הגרעין במרחקים קצרים. זהו תיקון האלקטרודינמיקה הקוונטית היחיד שנכלל (בלי self-energy או איברים נוספים).",
+        "qed_help": "תיקון קיטוב הריק מסדר ראשון לפוטנציאל (פוטנציאל Uehling): זוגות וירטואליים של אלקטרון-פוזיטרון משנים את השדה הקולוני של הגרעין במרחקים קצרים.",
         "screening_label": "מיסוך אלקטרוני",
         "screening_help": "מתחשב בענן האלקטרונים של האטום הממסך חלקית את מטען הגרעין ומשפיע על רמות האנרגיה של המיואון (בעיקר בקליפות החיצוניות).",
-        "recoil_label": "רתע גרעיני",
-        "recoil_help": "מתחשב בכך שמסת הגרעין סופית ולכן המיואון והגרעין נעים סביב מרכז המסה המשותף שלהם (מסה מצומצמת), במקום להניח גרעין נייח לחלוטין.",
         "initial_level_row_label": "רמה התחלתית",
         "create_run": "יצירת",
         "update_run": "עדכן",
@@ -509,7 +502,10 @@ def format_level_sub_btn(level_name):
 PAUSE_ICON = ("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 40'>"
               "<rect x='9' y='7' width='8' height='26' rx='2' fill='white'/><rect x='23' y='7' width='8' height='26' rx='2' fill='white'/></svg>")
 PERIODIC_TABLE_BOX_HEIGHT = 700   # the table scrolls inside this box; the dialog itself never scrolls
-MAX_START_N = 8           # highest starting shell offered: the MUDIRAC paper's examples stop at n = 5-6; above n = 7 our own runs start to fail
+NUCLEAR_RECOIL = True     # always on (the reduced mass of the muon-nucleus system, as in the MUDIRAC paper, Sec. 2.1). It is not
+#                           a choice for the user: with the recoil switched off this MUDIRAC build is not reproducible (random
+#                           aborts and, in some runs, the electronic screening silently dropped).
+MAX_START_N = 8          # highest starting shell offered: the MUDIRAC paper's examples stop at n = 5-6; above n = 7 our own runs start to fail
 SIM_DISABLE_FROM = 5000  # from this many muons on: exact spectrum only, no simulation (keeps the page responsive)
 MAX_ANIM_MUONS = SIM_DISABLE_FROM  # every muon below the limit is simulated
 
@@ -590,7 +586,7 @@ def initial_population_weight(level_name):
 
 def is_sublevel_allowed_for_element(level_name, element):
     """Checks whether a starting sublevel is physically allowed for cascade."""
-    if level_name in ("1s_1/2", "2s_1/2"):
+    if level_name == "1s_1/2":        # the ground state has nothing to decay to (2s is allowed: it decays to 2p when 2p lies lower)
         return False
     if mc.get_n(level_name) > MAX_START_N:
         return False
@@ -3251,13 +3247,15 @@ def _parse_level(level_name):
 
 
 def enforce_selection_rules(level_name, transitions):
-    """Keeps only electric-dipole (E1) radiative transitions to a lower shell (|Δl| = 1, |Δj| <= 1) and
-    re-normalises the branching ratios. Anything else cannot produce a single-photon X-ray line."""
+    """Keeps only electric-dipole (E1) radiative transitions to a lower-energy state of the same or a lower shell
+    (|Δl| = 1, |Δj| <= 1) and re-normalises the branching ratios. Anything else cannot produce a single-photon X-ray
+    line. (Transitions inside one shell exist: in heavy atoms the finite nuclear size lifts the s states above the p
+    states, e.g. 3s -> 3p in gold; MUDIRAC returns only the lines with a positive energy.)"""
     n_i, l_i, j_i = _parse_level(level_name)
     kept = []
     for t in transitions:
         n_f, l_f, j_f = _parse_level(t["Target Level"])
-        if n_f < n_i and abs(l_f - l_i) == 1 and abs(j_f - j_i) <= 2 and t["Rate (s^-1)"] > 0:
+        if n_f <= n_i and abs(l_f - l_i) == 1 and abs(j_f - j_i) <= 2 and t["Rate (s^-1)"] > 0:
             kept.append(dict(t))
     total = sum(t["Rate (s^-1)"] for t in kept)
     if total <= 0:
@@ -3286,15 +3284,13 @@ def spec_error_text(spec):
 
 def safe_calculate_transitions(level_name, element, lock, _cancel=None, **physics_kwargs):
     """Thread-safe wrapper around mc.calculate_branching_ratios. Everything returned is a MUDIRAC result (only
-    electric-dipole lines to a lower shell are kept); 2s_1/2 has none (2s -> 1s is not a single-photon line).
+    electric-dipole lines to lower-energy states are kept; a level without any (e.g. 2s in muonic hydrogen) gives []).
     If MUDIRAC cannot compute the level with the requested settings a MudiracError is raised."""
     def _check():
         if _cancel is not None and _cancel():
             raise RuntimeError("cancelled")
 
     _check()
-    if level_name == "2s_1/2":
-        return []
 
     iso = physics_kwargs.get("isotope")
     mcm = _mc_for(iso)
@@ -3303,7 +3299,7 @@ def safe_calculate_transitions(level_name, element, lock, _cancel=None, **physic
         transitions = mcm.calculate_branching_ratios(
             level_name, element=element, print_table=False, **physics_kwargs
         )
-        if not transitions:
+        if transitions is None:        # None = MUDIRAC gave no complete result; [] = it ran cleanly and the level has no decay line
             _lv, _nm = format_level_unicode(level_name), spec_name_unicode({'element': element, 'isotope': iso})
             raise MudiracError(f"MUDIRAC could not compute the level {_lv} of {_nm} with these settings.", _lv, _nm)
         return enforce_selection_rules(level_name, transitions)
@@ -3402,7 +3398,7 @@ def _worker_once(spec_entry, run_token, lock, shared_cache):
     base_kwargs = {
         "nuclear_model": spec_entry["nuclear_model"],
         "uehling_correction": spec_entry["uehling"],
-        "reduced_mass": spec_entry["red_mass"],
+        "reduced_mass": NUCLEAR_RECOIL,
     }
     # None = "no electronic background": muonic_cascade123 would otherwise always add its own [element] default
     base_kwargs["electronic_config"] = screening_config(element) if spec_entry["screening"] else None
@@ -3600,13 +3596,13 @@ def _worker_once(spec_entry, run_token, lock, shared_cache):
                         return
                     curr = cur_state[i]
                     iso_a = muon_iso[i]
-                    while curr != "1s_1/2" and safety[i] < 25:
+                    while curr != "1s_1/2" and safety[i] < 90:
                         node = (iso_a, curr)
                         trans = state_transitions_map.get(node)
                         if trans is None:
                             blocked.setdefault(node, []).append(i)
                             break
-                        if not trans:      # no radiative decay from here (e.g. 2s): cascade ends
+                        if not trans:      # no downward dipole decay from here (e.g. 2s in muonic hydrogen): cascade ends
                             safety[i] = 99
                             break
                         safety[i] += 1
@@ -3645,7 +3641,7 @@ def _worker_once(spec_entry, run_token, lock, shared_cache):
                             kept_steps[i].append(step)
                         curr = chosen["target"]
                     cur_state[i] = curr
-                    if curr == "1s_1/2" or safety[i] >= 25:
+                    if curr == "1s_1/2" or safety[i] >= 90:
                         finished += 1
                         if finished % update_step == 0:
                             spec_entry["progress"] = 0.45 + 0.55 * (finished / num_muons) * 0.95
@@ -4010,7 +4006,6 @@ def render_dialog_body():
         with st.container(key="dlg_corr_group"):
             ep["uehling"] = st.checkbox(tr("qed_label"), value=ep["uehling"], help=tr("qed_help"), key=ueh_key)
             ep["screening"] = st.checkbox(tr("screening_label"), value=ep["screening"], help=tr("screening_help"))
-            ep["red_mass"] = st.checkbox(tr("recoil_label"), value=ep["red_mass"], help=tr("recoil_help"))
 
         # (the green button sits in the grey band of the window, see the CSS; it is created last so that it sees every setting)
         with st.container(key="dlg_green_create_btn"):
@@ -4155,7 +4150,6 @@ def render_unified_canvas_animator(payload):
         "rtl": st.session_state.lang == "HE",
         "ground_reached": tr("ground_reached"),
         "no_transition": tr("no_transition"),
-        "no_transition_2s": tr("no_transition_2s"),
         "font_scale": st.session_state.font_scale / 100.0
     }
     json_data = json.dumps(payload)
@@ -5856,7 +5850,7 @@ def render_unified_canvas_animator(payload):
                 `Muon <b>#${{(st.muonIdx + 1).toLocaleString('en-US')}}</b>${{isoTxt}}: &nbsp;<b>${{htmlFrom}} → ${{htmlTo}}</b> &nbsp;` +
                 `(<i>P</i> = ${{st.activeStep.prob.toFixed(1)}}%, &nbsp;Δ<i>E</i> = <b>${{st.activeStep.energy.toFixed(2)}} keV</b>)`;
         }} else if (st.done) {{
-            // the muons end where the simulation really left them: 1s_1/2, or 2s_1/2 (no single-photon decay from there)
+            // the muons end where the simulation really left them: 1s_1/2, or a level without any downward dipole transition
             const fc = st.finalCounts || {{}};
             const nTot = sim.num_muons;
             const nGround = fc['1s_1/2'] || 0;
@@ -5879,7 +5873,7 @@ def render_unified_canvas_animator(payload):
             }});
             const stuckTxt = stuck.map(k => `${{fc[k].toLocaleString('en-US')}} stayed in ${{fmtStateHTML(k)}}`).join('; ');
             document.getElementById('statusStepText').innerHTML = stuck.length
-                ? `<b>Cascade Complete</b> — ${{nGround.toLocaleString('en-US')}} of ${{nTot.toLocaleString('en-US')}} μ⁻ reached the ground state 1s<sub>1/2</sub>; ${{stuckTxt}} (no single-photon decay from there) ` +
+                ? `<b>Cascade Complete</b> — ${{nGround.toLocaleString('en-US')}} of ${{nTot.toLocaleString('en-US')}} μ⁻ reached the ground state 1s<sub>1/2</sub>; ${{stuckTxt}} (no downward E1 transition from there) ` +
                   `(${{sim.total_photons_all.toLocaleString('en-US')}} 𝛾 photons).`
                 : `<b>Cascade Complete</b> — Ground state 1s<sub>1/2</sub> (${{nTot.toLocaleString('en-US')}} μ⁻, ${{sim.total_photons_all.toLocaleString('en-US')}} 𝛾 photons)` +
                   `.`;
@@ -6104,7 +6098,7 @@ def render_unified_canvas_animator(payload):
         if (!list.length) {{
             const emptyMsg = (focusState === '1s_1/2')
                 ? ui.ground_reached
-                : (focusState === '2s_1/2' ? ui.no_transition_2s : ui.no_transition);
+                : ui.no_transition;
             inspectorBarEl.innerHTML = `<div><b>${{ui.branching}} (${{fmtStateHTML(focusState)}}):</b></div><div class="inspector-options-row"><span>${{emptyMsg}}</span></div>`;
             return;
         }}
@@ -6411,7 +6405,6 @@ with col_left:
                                     "isotope": spec.get("isotope"),
                                     "uehling": spec["uehling"],
                                     "screening": spec["screening"],
-                                    "red_mass": spec["red_mass"],
                                 }
                                 st.session_state.editing_id = spec["id"]
                                 st.session_state.open_dialog_flag = True
@@ -6430,7 +6423,6 @@ with col_left:
                                     "isotope": spec.get("isotope"),
                                     "uehling": spec["uehling"],
                                     "screening": spec["screening"],
-                                    "red_mass": spec["red_mass"],
                                     "visible": spec["visible"],
                                     "color": new_color,
                                     "photons": list(spec.get("photons", [])),
@@ -6462,7 +6454,6 @@ with col_left:
                             correction_lines = (
                                 ("uehling", "qed_card_label"),
                                 ("screening", "screening_label"),
-                                ("red_mass", "recoil_label"),
                             )
                             correction_html = "".join(
                                 f"<span class='{'on' if spec.get(field) else 'off'}'>{tr(label)}</span>"
