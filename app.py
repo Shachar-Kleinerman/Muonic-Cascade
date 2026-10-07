@@ -1124,7 +1124,8 @@ st.markdown(f"""
     .hdr-atom {{ display: block; width: 22px; height: 22px; visibility: hidden; }}
     body.hdr-wait .hdr-atom {{ visibility: visible; animation: atomSpin 1.2s linear infinite; }}
     /* Compact font-size slider */
-    .st-key-font_size_slider {{ max-width: 190px; margin-left: auto; }}
+    /* the text-size control stands as far from the language switch (58 px) as the language switch from the "?" button */
+    .st-key-font_size_slider {{ max-width: 190px; margin-left: auto; right: 58px; }}
     .st-key-font_size_slider [data-testid="stSliderThumbValue"],
     .st-key-font_size_slider [data-testid="stSliderTickBar"] {{ display: none !important; }}
     .st-key-font_size_slider .fs-icon {{ display: flex; align-items: center; justify-content: center; transform: translateY(-7px); cursor: pointer; }}
@@ -1592,11 +1593,11 @@ st.markdown(f"""
     /* the "?" button of the help guide, right of the language switch */
     .help-q {{
         width: 26px; height: 26px; border-radius: 50%; box-sizing: border-box;
-        border: 1.8px solid #0f4c81; background: #ffffff; color: #0f4c81;
-        font-weight: 800; font-size: 15px; line-height: 22px; text-align: center;
+        border: 1px solid #e2e8f0; background: #e2e8f0; color: #334155;      /* the grey of the chosen language segment */
+        font-weight: 700; font-size: 15px; line-height: 24px; text-align: center;
         cursor: pointer; user-select: none; margin: 0 0 0 auto; position: relative; top: -7.5px;
     }}
-    .help-q:hover, .help-q:focus-visible {{ background: #0f4c81; color: #ffffff; outline: none; }}
+    .help-q:hover, .help-q:focus-visible {{ background: #cbd5e1; border-color: #cbd5e1; outline: none; }}
 
     /* Language switch: two segments, the chosen one filled, the other faded (no radio dots) */
     .st-key-lang_toggle [data-testid="stRadioGroup"] {{
@@ -2495,7 +2496,7 @@ PARENT_UI_JS = r'''
                 '#muon-help{position:fixed;left:0;right:0;bottom:0;top:var(--hdr-h,54px);z-index:1999990;background:rgba(15,23,42,.38)}' +
                 '#muon-help .mh-wrap{position:absolute;left:18px;right:18px;top:12px;bottom:12px;background:#fff;border-radius:12px;box-shadow:0 8px 30px rgba(0,0,0,.28);overflow:hidden}' +
                 '#muon-help .mh-scroll{position:absolute;left:0;right:0;top:0;bottom:0;overflow-y:auto;padding:50px clamp(18px,4vw,60px) 36px;box-sizing:border-box}' +
-                '#muon-help .mh-scroll>.mh{max-width:1000px;margin:0 auto}' +
+                '#muon-help .mh-scroll>.mh{max-width:1260px;margin:0 auto}' +
                 '#muon-help .mh-x{position:absolute;top:10px;right:14px;z-index:3;width:30px;height:30px;border-radius:50%;background:#fff;border:1.8px solid #475569;cursor:pointer;box-sizing:border-box}' +
                 '#muon-help .mh-x:before,#muon-help .mh-x:after{content:"";position:absolute;left:50%;top:50%;width:25px;height:2px;margin:-1px 0 0 -12.5px;background:#1e293b}' +
                 '#muon-help .mh-x:before{transform:rotate(45deg)}#muon-help .mh-x:after{transform:rotate(-45deg)}' +
@@ -6635,9 +6636,7 @@ with col_left:
     )
 
     # the help guide in the chosen language: sent to the page on every run (the "?" button reads it when it is pressed)
-    _help_labels = {k: tr(k) for k in ("muon_count", "distribution_label", "initial_level_row_label", "isotope_label",
-                                       "nuclear_model", "qed_label", "screening_label", "isotope_natural",
-                                       "dist_stat_short", "create_spec_sim")}
+    _help_labels = {k: tr(k) for k in ("create_spec_sim", "add_spectrum_top", "return_all_btn")}
     _help_lang = "HE" if st.session_state.lang == "HE" else "EN"
     _help_json = json.dumps({
         "lang": _help_lang, "dir": "rtl" if _help_lang == "HE" else "ltr",
