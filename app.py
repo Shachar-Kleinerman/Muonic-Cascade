@@ -4455,6 +4455,9 @@ def render_unified_canvas_animator(payload):
             justify-content: center;
             background: #f8fafc; border-top: 1px solid #e2e8f0;
             padding: 5px 14px; font-size: calc(12.5px * {ui_labels['font_scale']}); gap: 4px;
+            /* a fixed, narrow bar: when a level has many decay channels the list scrolls inside it (the window never grows) */
+            height: 96px; min-height: 96px; max-height: 96px; overflow-y: auto; flex: 0 0 auto;
+            justify-content: flex-start; box-sizing: border-box;
         }}
         .inspector-options-row {{
             display: flex;
@@ -6161,7 +6164,7 @@ def render_unified_canvas_animator(payload):
         if (sig === lastBottomBarSignature) return;
         lastBottomBarSignature = sig;
 
-        const list = (sim.state_transitions[focusState] || []).slice(0, 6);
+        const list = (sim.state_transitions[focusState] || []);       // every decay channel (the narrow bar scrolls)
         if (!list.length) {{
             const emptyMsg = (focusState === '1s_1/2')
                 ? ui.ground_reached
@@ -6636,7 +6639,7 @@ with col_left:
     )
 
     # the help guide in the chosen language: sent to the page on every run (the "?" button reads it when it is pressed)
-    _help_labels = {k: tr(k) for k in ("create_spec_sim", "add_spectrum_top", "return_all_btn")}
+    _help_labels = {k: tr(k) for k in ("create_spec_sim", "add_spectrum_top", "return_all_btn", "view_current_btn")}
     _help_lang = "HE" if st.session_state.lang == "HE" else "EN"
     _help_json = json.dumps({
         "lang": _help_lang, "dir": "rtl" if _help_lang == "HE" else "ltr",
