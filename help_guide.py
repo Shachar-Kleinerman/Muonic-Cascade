@@ -19,7 +19,7 @@ TEXT = {
         "intro": "The site simulates the X-ray cascade of a negative muon captured by an atom. The energies and the transition "
                  "probabilities come from MUDIRAC, a solver of the radial Dirac equation (the article above). "
                  "The three main screens lead to each other: press the circled button to reach the screen its arrow points to.",
-        "names": ["1. Create a spectrum", "2. View and compare spectra", "3. Interactive simulation"],
+        "names": ["Create a spectrum", "View and compare spectra", "Interactive simulation"],
     },
     "HE": {
         "title": "איך מסתובבים באתר",
@@ -28,7 +28,7 @@ TEXT = {
         "intro": "האתר מדמה את מפל קרני ה-X של מיואון שלילי שנלכד באטום. האנרגיות והסתברויות המעברים מגיעות מ-MUDIRAC, "
                  "פותר של משוואת דיראק הרדיאלית (המאמר שלמעלה). "
                  "שלושת המסכים המרכזיים מובילים זה לזה: לוחצים על הלחצן המסומן כדי להגיע למסך שאליו מצביע החץ שלו.",
-        "names": ["1. יצירת ספקטרום", "2. צפייה והשוואת ספקטרומים", "3. סימולציה אינטראקטיבית"],
+        "names": ["יצירת ספקטרום", "צפייה והשוואת ספקטרומים", "סימולציה אינטראקטיבית"],
     },
 }
 
@@ -48,28 +48,14 @@ _CSS = """<style>
 .mh svg{max-width:100%;height:auto;display:block;margin:0 auto}
 </style>"""
 
-_GREEN = "#22c55e"            # bright green of the circles
-_GREEN_DARK = "#15803d"
+_GREEN = "#16a34a"            # the green of the ellipses
 _SC = 540.0 / 1100.0          # the pictures are 1100 px wide and drawn 540 wide
 
 
 def _brush(cx, cy, rx, ry, phase=0.0):
-    """A hand-drawn looking loop in bright green (a brush stroke): a slightly spiralling ellipse that overshoots its start,
-    on a white halo so that it stands out from the picture, with a thinner darker stroke on top for body."""
-    paths = []
-    for sw, colour, op, dp in ((12.0, "#ffffff", 0.8, 0.0), (7.0, _GREEN, 1.0, 0.0), (2.6, _GREEN_DARK, 0.9, 0.5)):
-        pts = []
-        t0 = -0.35 * math.pi + dp + phase
-        t1 = t0 + 2 * math.pi * 1.07
-        n = 70
-        for i in range(n + 1):
-            t = t0 + (t1 - t0) * i / n
-            grow = 1.0 + 0.09 * (t - t0) / (2 * math.pi) + 0.025 * math.sin(3 * t + phase)
-            pts.append((cx + rx * grow * math.cos(t), cy + ry * grow * math.sin(t)))
-        d = "M" + " L".join(f"{x:.1f},{y:.1f}" for x, y in pts)
-        paths.append(f'<path d="{d}" fill="none" stroke="{colour}" stroke-width="{sw}" stroke-linecap="round" '
-                     f'stroke-linejoin="round" opacity="{op}"/>')
-    return "".join(paths)
+    """An exact ellipse around a button (fresh green, on a thin white halo so that it stands out from the picture)."""
+    return (f'<ellipse cx="{cx:.1f}" cy="{cy:.1f}" rx="{rx:.1f}" ry="{ry:.1f}" fill="none" stroke="#ffffff" stroke-width="9" opacity="0.85"/>'
+            f'<ellipse cx="{cx:.1f}" cy="{cy:.1f}" rx="{rx:.1f}" ry="{ry:.1f}" fill="none" stroke="{_GREEN}" stroke-width="4.5"/>')
 
 
 def _ring(im, key, x, y, pad_x=11, pad_y=10):
@@ -79,10 +65,10 @@ def _ring(im, key, x, y, pad_x=11, pad_y=10):
 
 
 def _edge(ring, deg, gap=8):
-    """A point just outside the circle (as drawn, it grows ~10 %), in the direction deg (0 = right, 90 = down)."""
+    """A point just outside the circle , in the direction deg (0 = right, 90 = down)."""
     cx, cy, rx, ry = ring
     a = math.radians(deg)
-    return cx + (rx * 1.12 + gap) * math.cos(a), cy + (ry * 1.12 + gap) * math.sin(a)
+    return cx + (rx + gap) * math.cos(a), cy + (ry + gap) * math.sin(a)
 
 
 def _cycle_svg(lang, labels):
@@ -100,8 +86,6 @@ def _cycle_svg(lang, labels):
         sizes.append((x, y, w, h))
         o.append(f'<rect x="{x - 1}" y="{y - 1}" width="{w + 2:.1f}" height="{h + 2:.1f}" rx="7" fill="#fff" stroke="#94a3b8" stroke-width="1.5"/>')
         o.append(f'<image href="data:image/webp;base64,{im["b64"]}" x="{x}" y="{y}" width="{w:.1f}" height="{h:.1f}"/>')
-        o.append(f'<circle cx="{x + 4}" cy="{y + 4}" r="15" fill="#0f4c81" stroke="#fff" stroke-width="2"/>'
-                 f'<text x="{x + 4}" y="{y + 10}" font-size="17" font-weight="700" text-anchor="middle" fill="#fff">{i + 1}</text>')
         # the title keeps its own reading direction, so that in Hebrew the number and its period stand at the right end
         o.append(f'<text x="{x + w / 2:.1f}" y="{y + h + 26:.1f}" font-size="19" font-weight="700" text-anchor="middle" fill="#0f172a" '
                  f'direction="{"rtl" if lang == "HE" else "ltr"}" style="unicode-bidi:isolate;direction:{"rtl" if lang == "HE" else "ltr"}">'
@@ -128,13 +112,6 @@ def _cycle_svg(lang, labels):
     sx, sy = _edge(r3b, 300)                                          # 3 -> 2  (the two display buttons)
     ex, ey = x2 + w2 * 0.2, y2 - 12
     o.append(f'<path d="M {sx:.0f} {sy:.0f} C {sx + 15:.0f} {sy - 95:.0f} {ex - 25:.0f} {ey - 100:.0f} {ex:.0f} {ey:.0f}" {arrow}/>')
-    # the names of the buttons stand beside the arrows (dark text on the empty space between the pictures), not on them
-    lab = lambda s: _html.escape(s)
-    txt = ('font-size="16" font-weight="600" fill="#0f172a" text-anchor="middle" style="unicode-bidi:isolate"')
-    o.append(f'<text x="{x1 + w1 - 40:.0f}" y="{y2 - 70:.0f}" {txt}>{lab(labels["create_spec_sim"])}</text>')
-    o.append(f'<text x="250" y="{y2 - 140:.0f}" {txt}>{lab(labels["add_spectrum_top"])}</text>')
-    o.append(f'<text x="600" y="{y2 - 118:.0f}" {txt}>{lab(labels["return_all_btn"])}</text>')
-    o.append(f'<text x="600" y="{y2 - 96:.0f}" {txt}>{lab(labels["view_current_btn"])}</text>')
     o.append("</svg>")
     return "".join(o)
 
