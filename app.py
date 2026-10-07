@@ -19,6 +19,7 @@ import streamlit as st
 import streamlit.components.v1 as components
 
 import muonic_cascade123 as mc
+import help_guide
 
 # Light theme only, with a restrained navy as the primary colour (instead of Streamlit's bright red/orange).
 try:
@@ -289,9 +290,9 @@ TRANSLATIONS = {
         "mudirac_cannot_run": "MUDIRAC cannot run this element with this nuclear model (SPHERE needs a nuclear charge radius that MUDIRAC does not have for it; FERMI2 without one works only with vacuum polarization switched off). Choose POINT, change the vacuum-polarization setting, or choose another isotope or element.",
         "qed_label": "Vacuum Polarization (Uehling)",
         "qed_card_label": "Vacuum Polarization",      # the spectrum tab is too narrow for the full label
-        "qed_help": "First-order vacuum-polarization correction to the potential (Uehling potential): virtual electron-positron pairs modify the nuclear Coulomb field at short distances.",
+        "qed_help": "First-order vacuum-polarization correction (Uehling potential) to the muon-nucleus interaction.",
         "screening_label": "Electronic Screening",
-        "screening_help": "Accounts for the surrounding atomic electron cloud that partially screens the nuclear charge, shifting outer muonic energy levels.",
+        "screening_help": "Electronic background charge, using the electron configuration of the atom with Z−1.",
         "initial_level_row_label": "Initial Level",
         "create_run": "Create",
         "update_run": "Update",
@@ -310,6 +311,7 @@ TRANSLATIONS = {
         "select_one_or_more": "Select one or more spectra to display",
         "anim_header": "Live Cascade Simulation:",
         "anim_computing": "Computing cascade tree in background...",
+        "help_btn": "Help: what this site can do",
         "play": "▶ Play",
         "pause": "⏸ Pause",
         "replay": "⟲ Replay",
@@ -387,9 +389,9 @@ TRANSLATIONS = {
         "mudirac_cannot_run": "⁧⁦MUDIRAC⁩ לא יכול להריץ יסוד זה עם מודל הגרעין שנבחר (המודל הכדורי דורש רדיוס מטען גרעיני שאין ל-⁦MUDIRAC⁩ עבורו, ו-⁦FERMI2⁩ בלי רדיוס כזה עובד רק כשקיטוב הריק כבוי). בחר ⁦POINT⁩, שנה את הגדרת קיטוב הריק, או בחר איזוטופ או יסוד אחר.⁩",
         "qed_label": "קיטוב הריק (Uehling)",
         "qed_card_label": "קיטוב הריק (Uehling)",
-        "qed_help": "תיקון קיטוב הריק מסדר ראשון לפוטנציאל (פוטנציאל Uehling): זוגות וירטואליים של אלקטרון-פוזיטרון משנים את השדה הקולוני של הגרעין במרחקים קצרים.",
+        "qed_help": "תיקון קיטוב הריק מסדר ראשון (פוטנציאל Uehling) לאינטראקציה בין המיואון לגרעין.",
         "screening_label": "מיסוך אלקטרוני",
-        "screening_help": "מתחשב בענן האלקטרונים של האטום הממסך חלקית את מטען הגרעין ומשפיע על רמות האנרגיה של המיואון (בעיקר בקליפות החיצוניות).",
+        "screening_help": "מטען אלקטרוני ברקע, לפי ההרכב האלקטרוני של האטום עם ⁦Z−1⁩.",
         "initial_level_row_label": "רמה התחלתית",
         "create_run": "יצירת",
         "update_run": "עדכן",
@@ -408,6 +410,7 @@ TRANSLATIONS = {
         "select_one_or_more": "בחר ספקטרום אחד או יותר להצגה",
         "anim_header": "סימולציית מפל חיה:",
         "anim_computing": "מחשב את עץ המעברים ברקע...",
+        "help_btn": "עזרה: מה אפשר לעשות באתר",
         "play": "▶ הפעל",
         "pause": "⏸ השהה",
         "replay": "⟲ הפעל שוב",
@@ -1586,6 +1589,15 @@ st.markdown(f"""
     .st-key-dlg_lvl_group [data-testid="stElementContainer"]:has(.dlg-cap) *,
     .st-key-dlg_iso_group [data-testid="stElementContainer"]:has(.dlg-cap) * {{ height: 16px !important; min-height: 16px !important; }}
 
+    /* the "?" button of the help guide, right of the language switch */
+    .help-q {{
+        width: 26px; height: 26px; border-radius: 50%; box-sizing: border-box;
+        border: 1.8px solid #0f4c81; background: #ffffff; color: #0f4c81;
+        font-weight: 800; font-size: 15px; line-height: 22px; text-align: center;
+        cursor: pointer; user-select: none; margin: 0 0 0 auto; position: relative; top: -7.5px;
+    }}
+    .help-q:hover, .help-q:focus-visible {{ background: #0f4c81; color: #ffffff; outline: none; }}
+
     /* Language switch: two segments, the chosen one filled, the other faded (no radio dots) */
     .st-key-lang_toggle [data-testid="stRadioGroup"] {{
         display: inline-flex !important;
@@ -2466,6 +2478,60 @@ PARENT_UI_JS = r'''
             commitBridge('.st-key-_n_bridge input', Date.now() + ':' + (inc ? 1 : -1));
         }
     }, { passive: false, capture: true });
+
+    // ------------------------------------------------------------------ help guide: the "?" button right of the language switch
+    // The guide (HTML in the chosen language, sent by the server in window.__muonHelp) is drawn as a layer under the header band.
+    var helpEl = D.getElementById('muon-help');        // a guide that is open while this script is re-installed (language switch) stays open
+    function helpClose() { if (helpEl) { if (helpEl.parentNode) helpEl.parentNode.removeChild(helpEl); helpEl = null; } }
+    function helpOpen() {
+        var h = W.__muonHelp;
+        if (!h) return;
+        var keep = helpEl ? helpEl.querySelector('.mh-scroll').scrollTop : 0;
+        helpClose();
+        if (!D.getElementById('muon-help-style')) {
+            var stl = D.createElement('style');
+            stl.id = 'muon-help-style';
+            stl.textContent =
+                '#muon-help{position:fixed;left:0;right:0;bottom:0;top:var(--hdr-h,54px);z-index:1999990;background:rgba(15,23,42,.38)}' +
+                '#muon-help .mh-wrap{position:absolute;left:18px;right:18px;top:12px;bottom:12px;background:#fff;border-radius:12px;box-shadow:0 8px 30px rgba(0,0,0,.28);overflow:hidden}' +
+                '#muon-help .mh-scroll{position:absolute;left:0;right:0;top:0;bottom:0;overflow-y:auto;padding:50px clamp(18px,4vw,60px) 36px;box-sizing:border-box}' +
+                '#muon-help .mh-scroll>.mh{max-width:1000px;margin:0 auto}' +
+                '#muon-help .mh-x{position:absolute;top:10px;right:14px;z-index:3;width:30px;height:30px;border-radius:50%;background:#fff;border:1.8px solid #475569;cursor:pointer;box-sizing:border-box}' +
+                '#muon-help .mh-x:before,#muon-help .mh-x:after{content:"";position:absolute;left:50%;top:50%;width:25px;height:2px;margin:-1px 0 0 -12.5px;background:#1e293b}' +
+                '#muon-help .mh-x:before{transform:rotate(45deg)}#muon-help .mh-x:after{transform:rotate(-45deg)}' +
+                '#muon-help .mh-x:hover{background:#c1121f;border-color:#991b1b}#muon-help .mh-x:hover:before,#muon-help .mh-x:hover:after{background:#fff}';
+            D.head.appendChild(stl);
+        }
+        helpEl = D.createElement('div');
+        helpEl.id = 'muon-help';
+        helpEl.setAttribute('data-lang', h.lang);
+        helpEl.innerHTML = '<div class="mh-wrap"><div class="mh-x" tabindex="0" aria-label="' + h.close + '" title="' + h.close + '"></div>' +
+            '<div class="mh-scroll">' + h.html + '</div></div>';
+        D.body.appendChild(helpEl);
+        helpEl.querySelector('.mh-scroll').scrollTop = keep;
+    }
+    on(D, 'click', function (e) {
+        var t = e.target && e.target.closest ? e.target.closest('.help-q, #muon-help .mh-x') : null;
+        if (t) {
+            e.preventDefault(); e.stopPropagation();
+            if (t.classList.contains('mh-x') || helpEl) helpClose(); else helpOpen();
+            return;
+        }
+        if (helpEl && e.target === helpEl) helpClose();
+    }, true);
+    on(D, 'keydown', function (e) {
+        if (e.key === 'Escape' && helpEl) { helpClose(); return; }
+        var t = e.target;
+        if ((e.key === 'Enter' || e.key === ' ') && t && t.classList && (t.classList.contains('help-q') || t.classList.contains('mh-x'))) {
+            e.preventDefault();
+            if (t.classList.contains('mh-x') || helpEl) helpClose(); else helpOpen();
+        }
+    }, true);
+    // the language was changed while the guide is open: show it in the new language (the server has sent the new text)
+    var helpTimer = setInterval(function () {
+        if (helpEl && W.__muonHelp && W.__muonHelp.lang !== helpEl.getAttribute('data-lang')) helpOpen();
+    }, 400);
+    cleanups.push(function () { clearInterval(helpTimer); });
 
     // ------------------------------------------------------------------ thin scrollbar on the left edge of the spectra list
     // (the list scrolls with the wheel, but without a visible scrollbar: this one shows it and can be clicked / dragged)
@@ -6235,7 +6301,7 @@ if st.session_state.open_dialog_flag or st.session_state.get("dialog_alive"):
 # ANCHORED TOP HEADER: TITLE | FONT SCALE | LANGUAGE
 # ==============================================================================
 with st.container(key="app_header"):
-    hdr_title, hdr_font, hdr_lang = st.columns([7.2, 0.9, 0.9], vertical_alignment="center")
+    hdr_title, hdr_font, hdr_lang, hdr_help = st.columns([7.2, 0.9, 0.9, 0.34], vertical_alignment="center")
 
 hdr_title.markdown(
     f"<h3 style='margin:0; padding:0; font-size:1.75rem; font-weight:600; line-height:1.2; "
@@ -6293,6 +6359,11 @@ with hdr_lang:
 if lang_choice != st.session_state.lang:
     st.session_state.lang = lang_choice
     st.rerun()
+
+# the "?" to the right of the language switch: opens the help guide (a layer drawn by the page script, see PARENT_UI_JS)
+with hdr_help:
+    st.markdown(f"<div class='help-q' tabindex='0' aria-label='{tr('help_btn')}' title='{tr('help_btn')}'>?</div>",
+                unsafe_allow_html=True)
 
 
 # ==============================================================================
@@ -6562,6 +6633,18 @@ with col_left:
         "})();</script>",
         height=0,
     )
+
+    # the help guide in the chosen language: sent to the page on every run (the "?" button reads it when it is pressed)
+    _help_labels = {k: tr(k) for k in ("muon_count", "distribution_label", "initial_level_row_label", "isotope_label",
+                                       "nuclear_model", "qed_label", "screening_label", "isotope_natural",
+                                       "dist_stat_short", "create_spec_sim")}
+    _help_lang = "HE" if st.session_state.lang == "HE" else "EN"
+    _help_json = json.dumps({
+        "lang": _help_lang, "dir": "rtl" if _help_lang == "HE" else "ltr",
+        "close": help_guide.TEXT[_help_lang]["close"],
+        "html": help_guide.help_html(_help_lang, _help_labels),
+    }).replace("</", "<\\/")
+    embed_html_zero("<script>(function(){try{window.parent.__muonHelp=" + _help_json + ";}catch(e){}})();</script>", height=0)
 
 
 with col_right:
