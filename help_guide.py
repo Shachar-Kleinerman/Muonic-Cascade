@@ -13,7 +13,7 @@ import help_guide_images as _img
 
 TEXT = {
     "EN": {
-        "title": "How to move around the site",
+        "title": "Information",
         "close": "Close",
         "cite": "The calculations are based on MUDIRAC:",
         "intro": "The site simulates the X-ray cascade of a negative muon captured by an atom. The energies and the transition "
@@ -22,7 +22,7 @@ TEXT = {
         "names": ["Create a spectrum", "View and compare spectra", "Interactive simulation"],
     },
     "HE": {
-        "title": "איך מסתובבים באתר",
+        "title": "מידע",
         "close": "סגירה",
         "cite": "החישובים מתבססים על MUDIRAC:",
         "intro": "האתר מדמה את מפל קרני ה-X של מיואון שלילי שנלכד באטום. האנרגיות והסתברויות המעברים מגיעות מ-MUDIRAC, "
