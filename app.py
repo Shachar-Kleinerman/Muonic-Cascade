@@ -1128,7 +1128,16 @@ st.markdown(f"""
     body.hdr-wait .hdr-atom {{ visibility: visible; animation: atomSpin 1.2s linear infinite; }}
     /* Compact font-size slider */
     /* the text-size control stands as far from the language switch (58 px) as the language switch from the "?" button */
-    .st-key-font_size_slider {{ max-width: 190px; margin-left: auto; right: 7.6px; }}   /* 10 px from the language switch, like the gap between i and ? */
+    .st-key-font_size_slider {{ width: 126px; max-width: 126px; margin-left: auto; }}
+    /* header row: the title takes the free width; text-size slider, language switch and the i / ? buttons keep their own
+       width and stand exactly 10 px apart at every text size (a larger text pushes them to the left, never closer) */
+    [data-testid="stHorizontalBlock"]:has(> [data-testid="stColumn"] .st-key-lang_toggle) {{ gap: 10px !important; }}
+    [data-testid="stHorizontalBlock"]:has(> [data-testid="stColumn"] .st-key-lang_toggle) > [data-testid="stColumn"] {{
+        flex: 0 0 auto !important; width: auto !important; min-width: 0 !important;
+    }}
+    [data-testid="stHorizontalBlock"]:has(> [data-testid="stColumn"] .st-key-lang_toggle) > [data-testid="stColumn"]:first-child {{
+        flex: 1 1 auto !important;
+    }}
     .st-key-font_size_slider [data-testid="stSliderThumbValue"],
     .st-key-font_size_slider [data-testid="stSliderTickBar"] {{ display: none !important; }}
     .st-key-font_size_slider .fs-icon {{ display: flex; align-items: center; justify-content: center; transform: translateY(-7px); cursor: pointer; }}
@@ -1511,7 +1520,7 @@ st.markdown(f"""
     .st-key-top_add_full .st-key-top_add_spec_btn button p {{ font-size: 1.13em !important; }}
     /* the guide fills the rest of the window (the page itself never scrolls) */
     .st-key-empty_site_guide {{ margin: 30px 0 0 0 !important; }}
-    .st-key-empty_site_guide iframe {{ height: calc(100vh - var(--hdr-h, 54px) - 150px) !important; min-height: 260px; }}
+    .st-key-empty_site_guide iframe {{ height: calc(100vh - var(--hdr-h, 54px) - 102px) !important; min-height: 260px; }}
     .st-key-top_add_full button > div {{ justify-content: center !important; }}
     /* "Create new spectrum" and "Select all" buttons: identical height, on the same line */
     .st-key-top_add_spec_btn button,
@@ -1609,7 +1618,7 @@ st.markdown(f"""
     }}
     .help-q:hover, .help-q:focus-visible {{ background: #cbd5e1; border-color: #cbd5e1; outline: none; }}
     /* two buttons: "about the project" (i) and the site guide (?) */
-    .help-btns {{ display: flex; justify-content: flex-end; gap: 10px; position: relative; top: -7.5px; direction: ltr; }}
+    .help-btns {{ display: flex; justify-content: flex-end; gap: 10px; position: relative; top: {-7.5 * scale_factor:.2f}px; direction: ltr; }}
     .help-btns .help-q {{ margin: 0; top: 0; }}
     .help-q.help-i {{ font-family: Georgia, 'Times New Roman', serif; font-style: italic; font-size: 24px; }}
 

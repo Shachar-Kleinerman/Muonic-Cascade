@@ -13,7 +13,7 @@ import help_guide_images as _img
 
 TEXT = {
     "EN": {
-        "tab_info": "Information",
+        "tab_info": "About the project",
         "tab_guide": "Site guide",
         "close": "Close",
         "no_report": "The project report is not available.",
@@ -24,7 +24,7 @@ TEXT = {
         "names": ["Create a spectrum", "View and compare spectra", "Interactive simulation"],
     },
     "HE": {
-        "tab_info": "מידע",
+        "tab_info": "על הפרויקט",
         "tab_guide": "התמצאות באתר",
         "close": "סגירה",
         "no_report": "דוח הפרויקט אינו זמין.",
@@ -137,7 +137,7 @@ html,body{margin:0;height:100%;background:transparent;overflow:hidden}
 .side p{flex:0 0 21%;margin:0;font-size:13.5px;line-height:1.6}
 .side .fig{flex:1 1 auto;min-width:0;height:100%;display:flex;align-items:center;justify-content:center;
       box-sizing:border-box;padding:8px;background:#f8fafc;border:1px solid #dbe5f0;border-radius:10px;direction:ltr}
-.side svg{max-width:100%;max-height:100%;width:auto;height:auto;display:block}
+.side svg{width:100%;height:100%;display:block}   /* as large as the box allows; the drawing keeps its proportions */
 </style>"""
     return "".join([
         css, f'<div class="side" dir="{"rtl" if lang == "HE" else "ltr"}">',
