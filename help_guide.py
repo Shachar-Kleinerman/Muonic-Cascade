@@ -243,19 +243,28 @@ _ZOOM_JS = """<script>(function () {
   var zi = document.getElementById('zi'), zo = document.getElementById('zo'), zr = document.getElementById('zr');
   if (zi) zi.onclick = function () { centre(1.3); this.blur(); };
   if (zo) zo.onclick = function () { centre(1 / 1.3); this.blur(); };
-  // 100 %: glides back to the whole map, like the 100 % button of the simulator (same exponential rate, 10.5 / s)
-  var anim = null;
+  // 100 %: glides back to the whole map (like the 100 % button of the simulator). One continuous zoom-out about a fixed
+  // point of the map: the zoom falls on a log scale with an ease-in-out curve (slow start, slow end) over DUR ms, and
+  // the visible part keeps that point in place, so there is no jump at the start.
+  var anim = null, DUR = 520;
   function glideHome() {
-    var last = performance.now();
-    function step(now) {
-      var k = 1 - Math.exp(-10.5 * Math.min(0.05, (now - last) / 1000)); last = now;
-      var t = [X0, Y0, W, H];
-      for (var i = 0; i < 4; i++) vb[i] += (t[i] - vb[i]) * k;
-      z = W / vb[2];
-      if (Math.abs(vb[2] - W) < 0.3 && Math.abs(vb[0] - X0) < 0.3 && Math.abs(vb[1] - Y0) < 0.3) { vb = t; z = 1; anim = null; show(); return; }
+    if (anim) cancelAnimationFrame(anim);
+    var z0 = W / vb[2], v0 = vb.slice();
+    if (z0 <= 1.0001) { vb = [X0, Y0, W, H]; z = 1; show(); return; }
+    // the fixed point F: v0 and the home view are both scaled about it
+    var s = 1 - v0[2] / W;
+    var fx = (v0[0] - X0 * v0[2] / W) / s, fy = (v0[1] - Y0 * v0[3] / H) / s;
+    var t0 = performance.now();
+    function step() {
+      var p = Math.min(1, (performance.now() - t0) / DUR);
+      var e = 0.5 - 0.5 * Math.cos(Math.PI * p);           // ease in-out
+      var nz = Math.exp(Math.log(z0) * (1 - e));
+      var w = W / nz, h = H / nz;
+      vb = [fx + (X0 - fx) * (w / W), fy + (Y0 - fy) * (h / H), w, h];
+      z = nz;
+      if (p >= 1) { vb = [X0, Y0, W, H]; z = 1; anim = null; show(); return; }
       show(); anim = requestAnimationFrame(step);
     }
-    if (anim) cancelAnimationFrame(anim);
     anim = requestAnimationFrame(step);
   }
   // any other zoom or drag stops the glide
