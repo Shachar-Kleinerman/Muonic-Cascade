@@ -1128,7 +1128,7 @@ st.markdown(f"""
     body.hdr-wait .hdr-atom {{ visibility: visible; animation: atomSpin 1.2s linear infinite; }}
     /* Compact font-size slider */
     /* the text-size control stands as far from the language switch (58 px) as the language switch from the "?" button */
-    .st-key-font_size_slider {{ max-width: 190px; margin-left: auto; right: 58px; }}
+    .st-key-font_size_slider {{ max-width: 190px; margin-left: auto; right: 7.6px; }}   /* 10 px from the language switch, like the gap between i and ? */
     .st-key-font_size_slider [data-testid="stSliderThumbValue"],
     .st-key-font_size_slider [data-testid="stSliderTickBar"] {{ display: none !important; }}
     .st-key-font_size_slider .fs-icon {{ display: flex; align-items: center; justify-content: center; transform: translateY(-7px); cursor: pointer; }}
@@ -1602,7 +1602,7 @@ st.markdown(f"""
 
     /* the "?" button of the help guide, right of the language switch */
     .help-q {{
-        width: 39px; height: 39px; border-radius: 50%; box-sizing: border-box;
+        width: 39px; height: 39px; min-width: 39px; flex: 0 0 39px; border-radius: 50%; box-sizing: border-box;
         border: 1px solid #e2e8f0; background: #e2e8f0; color: #334155;      /* the grey of the chosen language segment */
         font-weight: 700; font-size: 22.5px; line-height: 37px; text-align: center;
         cursor: pointer; user-select: none; margin: 0 0 0 auto; position: relative; top: -7.5px;
@@ -1623,7 +1623,8 @@ st.markdown(f"""
         border-radius: 8px;
         padding: 1px;
         height: 39px; box-sizing: border-box; align-items: stretch !important;   /* = the diameter of the i / ? buttons */    }}
-    .st-key-lang_toggle label[data-testid="stRadioOption"] {{ display: flex !important; align-items: center !important; }}
+    .st-key-lang_toggle [data-testid="stRadioGroup"] > * {{ height: 100% !important; }}
+    .st-key-lang_toggle label[data-testid="stRadioOption"] {{ display: flex !important; align-items: center !important; height: 100% !important; box-sizing: border-box; }}
     .st-key-lang_toggle label[data-testid="stRadioOption"] {{
         margin: 0 !important;
         padding: 1px 8px !important;
@@ -2128,6 +2129,20 @@ PARENT_UI_JS = r'''
     on(D, 'keydown', function (e) {
         if ((e.ctrlKey || e.metaKey) && ['+', '-', '=', '_', 'Add', 'Subtract'].indexOf(e.key) >= 0) e.preventDefault();
     }, true);
+    // the same inside every frame of the page (spectra, start-page guide ...): a wheel over a frame never reaches this page
+    function guardZoom(doc) {
+        if (!doc || doc.__muonZoomGuard) return;
+        doc.__muonZoomGuard = true;
+        doc.addEventListener('wheel', function (e) { if (e.ctrlKey) e.preventDefault(); }, { passive: false, capture: true });
+        doc.addEventListener('keydown', function (e) {
+            if ((e.ctrlKey || e.metaKey) && ['+', '-', '=', '_', 'Add', 'Subtract'].indexOf(e.key) >= 0) e.preventDefault();
+        }, true);
+    }
+    var zoomGuardTimer = setInterval(function () {
+        var fr = D.querySelectorAll('iframe');
+        for (var k = 0; k < fr.length; k++) { try { guardZoom(fr[k].contentDocument); } catch (err) {} }
+    }, 500);
+    cleanups.push(function () { clearInterval(zoomGuardTimer); });
     // a faded entry can be hovered (its explanation appears) but not chosen: every press on it is swallowed
     ['pointerdown', 'pointerup', 'mousedown', 'mouseup', 'click'].forEach(function (ev) {
         on(D, ev, function (e) {
