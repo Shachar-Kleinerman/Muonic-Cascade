@@ -46,7 +46,7 @@ _CSS = """<style>
 </style>"""
 
 _GREEN = "#16a34a"            # the green of the ellipses
-_SC = 540.0 / 1840.0          # the pictures are 1840 px wide (help_guide_images.OUT_W) and drawn 540 wide
+_DRAW_W = 540.0               # every picture is drawn 540 wide in the figure (whatever its own width in pixels)
 
 
 def _brush(cx, cy, rx, ry, phase=0.0):
@@ -58,7 +58,8 @@ def _brush(cx, cy, rx, ry, phase=0.0):
 def _ring(im, key, x, y, pad_x=11, pad_y=10):
     """Centre and radii (in the figure) of the circle around the button box im[key] of the picture drawn at (x, y)."""
     bx0, by0, bx1, by1 = im[key]
-    return (x + (bx0 + bx1) / 2 * _SC, y + (by0 + by1) / 2 * _SC, (bx1 - bx0) / 2 * _SC + pad_x, (by1 - by0) / 2 * _SC + pad_y)
+    sc = _DRAW_W / im["w"]
+    return (x + (bx0 + bx1) / 2 * sc, y + (by0 + by1) / 2 * sc, (bx1 - bx0) / 2 * sc + pad_x, (by1 - by0) / 2 * sc + pad_y)
 
 
 def _edge(ring, deg, gap=8):
@@ -68,10 +69,12 @@ def _edge(ring, deg, gap=8):
     return cx + (rx + gap) * math.cos(a), cy + (ry + gap) * math.sin(a)
 
 
-def _cycle_svg(lang, labels):
+def _cycle_svg(lang, labels, images=None):
+    """images: the picture set (help_guide_images.IMAGES_SMALL, 1100 px, for the "?" window; IMAGES, 1840 px, for the
+    start page, whose map can be zoomed in)."""
     t = TEXT[lang]
     keys = ["create", "spectra", "sim"]
-    imgs = [_img.IMAGES[(lang, k)] for k in keys]
+    imgs = [(images or _img.IMAGES_SMALL)[(lang, k)] for k in keys]
     pos = [(330, 36), (650, 440), (10, 440)]                  # top, bottom right, bottom left
     W, H = 1200, 740
     o = [f'<svg viewBox="0 0 {W} {H}" width="{W}" height="{H}" xmlns="http://www.w3.org/2000/svg" font-family="Arial,sans-serif">',
@@ -79,7 +82,7 @@ def _cycle_svg(lang, labels):
          '<path d="M0,0 L10,5 L0,10 z" fill="#0f4c81"/></marker></defs>']
     sizes = []
     for i, (im, (x, y)) in enumerate(zip(imgs, pos)):
-        w, h = im["w"] * _SC, im["h"] * _SC
+        w, h = _DRAW_W, im["h"] * _DRAW_W / im["w"]
         sizes.append((x, y, w, h))
         o.append(f'<rect x="{x - 1}" y="{y - 1}" width="{w + 2:.1f}" height="{h + 2:.1f}" rx="7" fill="#fff" stroke="#94a3b8" stroke-width="1.5"/>')
         o.append(f'<image href="data:image/webp;base64,{im["b64"]}" x="{x}" y="{y}" width="{w:.1f}" height="{h:.1f}"/>')
@@ -126,9 +129,9 @@ def help_html(lang, labels):
     ])
 
 def start_page_html(lang, labels, reset_label="🔍 100%", wheel_label="", fs=1.0):
-    """The site guide for the start page (no spectrum yet): the text beside the map (Hebrew: right of it, English: left
-    of it), and the map scaled to the height of its frame, so that the whole page fits without scrolling.
-    The zoom buttons (-, 100%, +) in the top-left corner of the map box look like those above the plots."""
+    """The site guide for the start page (no spectrum yet): the text on the right of the map (in both languages), and the
+    map as large as its box allows, so that the whole page fits without scrolling.
+    The zoom buttons (-, 100%, +) in the bottom-left corner of the map box look like those above the plots."""
     lang = "HE" if lang == "HE" else "EN"
     t = TEXT[lang]
     S = max(0.85, min(1.3, fs or 1.0))
@@ -145,52 +148,88 @@ def start_page_html(lang, labels, reset_label="🔍 100%", wheel_label="", fs=1.
         '</div>')
     css = """<style>
 .side .fig{position:relative}
-.zrow{position:absolute;top:8px;left:8px;z-index:5;display:inline-flex;align-items:center;gap:6px;direction:ltr;user-select:none}
+.zrow{position:absolute;bottom:8px;left:8px;z-index:5;display:inline-flex;align-items:center;gap:6px;direction:ltr;user-select:none}
 .zrow button{font-family:'Calibri','Segoe UI',sans-serif;background:#ffffff;color:#1e293b;border:1px solid #64748b;
       border-radius:6px;padding:4px 9px;font-size:calc(13px * var(--fs));font-weight:600;cursor:pointer;transition:all 0.15s;
       display:inline-flex;align-items:center;justify-content:center;height:calc(28px * var(--fs));box-sizing:border-box}
 .zrow button:hover{background:#f1f5f9}
 .zw{position:relative;display:inline-flex;align-items:center}
-.ztip{position:absolute;bottom:-34px;left:50%;transform:translateX(-50%);background:#0f172a;color:#ffffff;font-size:11.5px;
+.ztip{position:absolute;top:-34px;left:50%;transform:translateX(-50%);background:#0f172a;color:#ffffff;font-size:11.5px;
       font-weight:600;padding:4px 10px;border-radius:6px;white-space:nowrap;display:flex;align-items:center;gap:6px;
       opacity:0;pointer-events:none;transition:opacity 0.15s ease;z-index:120;box-shadow:0 3px 8px rgba(15,23,42,0.35);
       border:1px solid #334155;font-family:'Calibri','Segoe UI',sans-serif}
 .zw:hover .ztip{opacity:1}
-.zw.first .ztip{left:0;transform:none}   /* opens inwards, so the frame never clips it */
+.zw.first .ztip{left:0;transform:none}   /* opens inwards (and above the buttons), so the frame never clips it */
 </style>""".replace("var(--fs)", f"{S:.3f}") + """<style>
 html,body{margin:0;height:100%;background:transparent;overflow:hidden}
-.side{display:flex;align-items:center;gap:26px;height:100%;box-sizing:border-box;padding:0 6px;
+.side{display:flex;align-items:center;gap:26px;height:100%;box-sizing:border-box;padding:0 6px;direction:ltr;
       font-family:'Rubik','Segoe UI',Arial,sans-serif;color:#0f172a}
 .side p{flex:0 0 21%;margin:0;font-size:13.5px;line-height:1.6}
-.side .fig{flex:1 1 auto;min-width:0;height:100%;display:flex;align-items:center;justify-content:center;
-      box-sizing:border-box;padding:8px;background:#f8fafc;border:1px solid #dbe5f0;border-radius:10px;direction:ltr}
-.side .fig > svg{width:100%;height:100%;display:block}   /* as large as the box allows; the drawing keeps its proportions */
+.side .fig{flex:1 1 auto;min-width:0;height:100%;display:flex;align-items:center;justify-content:center;overflow:hidden;
+      box-sizing:border-box;padding:0;background:#f8fafc;border:1px solid #dbe5f0;border-radius:10px}
+/* as large as the box allows (the viewBox is cut to the drawing itself, see _ZOOM_JS); the drawing keeps its proportions */
+.side .fig > svg{width:100%;height:100%;display:block;touch-action:none}
+.side .fig > svg.pan{cursor:grab}
+.side .fig > svg.pan.drag{cursor:grabbing}
 </style>"""
+    # the map on the left and the text on its right, in both languages
     return "".join([
-        css, f'<div class="side" dir="{"rtl" if lang == "HE" else "ltr"}">',
-        f'<p>{t["intro"]}</p>',
-        f'<div class="fig">{buttons}{_cycle_svg(lang, labels)}</div>',
+        css, '<div class="side">',
+        f'<div class="fig">{buttons}{_cycle_svg(lang, labels, _img.IMAGES)}</div>',
+        f'<p dir="{"rtl" if lang == "HE" else "ltr"}">{t["intro"]}</p>',
         "</div>",
         _ZOOM_JS,
     ])
 
 
-# wheel over the map: zoom in around the mouse (up to MAX times) and back out, never below the whole map (100 %).
+# wheel over the map: zoom in around the mouse (up to MAX times) and back out, never below the whole map (100 %); when
+# zoomed in, the map can be dragged with the mouse. At 100 % the viewBox is cut to the drawing itself (its bounding box
+# plus the half width of the circles' halo), so the drawing reaches the edges of its box.
 # The zoom changes the viewBox of the SVG, so arrows and circles stay sharp; the screenshots are kept at their native
-# resolution (help_guide_images, 1840 px wide), so they stay sharp up to about this zoom.
+# resolution (help_guide_images.IMAGES, 1840 px wide), so they stay sharp up to about this zoom.
 _ZOOM_JS = """<script>(function () {
   var svg = document.querySelector('.side .fig > svg'); if (!svg) return;
-  var W = 1200, H = 740, MAX = 3.5, z = 1, vb = [0, 0, W, H];
+  var bb = svg.getBBox(), M = 5;
+  var X0 = bb.x - M, Y0 = bb.y - M, W = bb.width + 2 * M, H = bb.height + 2 * M;
+  var MAX = 3.5, z = 1, vb = [X0, Y0, W, H];
+  function show() {
+    svg.setAttribute('viewBox', vb.join(' '));
+    svg.classList.toggle('pan', z > 1.0001);
+  }
+  // keep the visible part inside the drawing
+  function clamp(nx, ny, w, h) {
+    return [Math.min(Math.max(X0, nx), X0 + W - w), Math.min(Math.max(Y0, ny), Y0 + H - h)];
+  }
+  show();
   // zoom to nz keeping the map point (px, py) in place
   function zoomTo(nz, px, py) {
     nz = Math.min(MAX, Math.max(1, nz));
     if (nz === z) return;
     var w = W / nz, h = H / nz;
-    var nx = px - (px - vb[0]) * (w / vb[2]), ny = py - (py - vb[1]) * (h / vb[3]);
-    nx = Math.min(Math.max(0, nx), W - w); ny = Math.min(Math.max(0, ny), H - h);
-    vb = [nx, ny, w, h]; z = nz;
-    svg.setAttribute('viewBox', vb.join(' '));
+    var c = clamp(px - (px - vb[0]) * (w / vb[2]), py - (py - vb[1]) * (h / vb[3]), w, h);
+    vb = [c[0], c[1], w, h]; z = nz;
+    show();
   }
+  // drag (left mouse button) moves the map while it is zoomed in
+  var drag = null;
+  svg.addEventListener('pointerdown', function (e) {
+    if (z <= 1.0001 || e.button !== 0) return;
+    e.preventDefault();
+    drag = { x: e.clientX, y: e.clientY, vx: vb[0], vy: vb[1] };
+    svg.setPointerCapture(e.pointerId);
+    svg.classList.add('drag');
+  });
+  svg.addEventListener('pointermove', function (e) {
+    if (!drag) return;
+    var r = svg.getBoundingClientRect();
+    var s = Math.min(r.width / vb[2], r.height / vb[3]);
+    var c = clamp(drag.vx - (e.clientX - drag.x) / s, drag.vy - (e.clientY - drag.y) / s, vb[2], vb[3]);
+    vb[0] = c[0]; vb[1] = c[1];
+    show();
+  });
+  function stop() { drag = null; svg.classList.remove('drag'); }
+  svg.addEventListener('pointerup', stop);
+  svg.addEventListener('pointercancel', stop);
   svg.addEventListener('wheel', function (e) {
     e.preventDefault();
     var r = svg.getBoundingClientRect();
@@ -204,5 +243,5 @@ _ZOOM_JS = """<script>(function () {
   var zi = document.getElementById('zi'), zo = document.getElementById('zo'), zr = document.getElementById('zr');
   if (zi) zi.onclick = function () { centre(1.3); this.blur(); };
   if (zo) zo.onclick = function () { centre(1 / 1.3); this.blur(); };
-  if (zr) zr.onclick = function () { z = 1; vb = [0, 0, W, H]; svg.setAttribute('viewBox', vb.join(' ')); this.blur(); };
+  if (zr) zr.onclick = function () { z = 1; vb = [X0, Y0, W, H]; show(); this.blur(); };
 })();</script>"""
