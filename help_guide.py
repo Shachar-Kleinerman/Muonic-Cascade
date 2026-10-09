@@ -122,3 +122,24 @@ def help_html(lang, labels):
         f'<div class="fig">{_cycle_svg(lang, labels)}</div>',
         "</div>",
     ])
+
+def start_page_html(lang, labels):
+    """The site guide for the start page (no spectrum yet): the text beside the map (Hebrew: right of it, English: left
+    of it), and the map scaled to the height of its frame, so that the whole page fits without scrolling."""
+    lang = "HE" if lang == "HE" else "EN"
+    t = TEXT[lang]
+    css = """<style>
+html,body{margin:0;height:100%;background:transparent;overflow:hidden}
+.side{display:flex;align-items:center;gap:26px;height:100%;box-sizing:border-box;padding:0 6px;
+      font-family:'Rubik','Segoe UI',Arial,sans-serif;color:#0f172a}
+.side p{flex:0 0 21%;margin:0;font-size:13.5px;line-height:1.6}
+.side .fig{flex:1 1 auto;min-width:0;height:100%;display:flex;align-items:center;justify-content:center;
+      box-sizing:border-box;padding:8px;background:#f8fafc;border:1px solid #dbe5f0;border-radius:10px;direction:ltr}
+.side svg{max-width:100%;max-height:100%;width:auto;height:auto;display:block}
+</style>"""
+    return "".join([
+        css, f'<div class="side" dir="{"rtl" if lang == "HE" else "ltr"}">',
+        f'<p>{t["intro"]}</p>',
+        f'<div class="fig">{_cycle_svg(lang, labels)}</div>',
+        "</div>",
+    ])

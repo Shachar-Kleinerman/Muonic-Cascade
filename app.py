@@ -1507,8 +1507,11 @@ st.markdown(f"""
     .st-key-top_add_full button {{ justify-content: center !important; }}
     /* start page: a narrower create button, centred, with the site guide under it */
     .st-key-top_add_full [data-testid="stButton"] {{ display: flex !important; justify-content: center !important; }}
-    .st-key-top_add_full [data-testid="stButton"] button {{ width: min(380px, 100%) !important; }}
-    .st-key-empty_site_guide {{ max-width: 1100px; margin: 14px auto 0 auto !important; }}
+    .st-key-top_add_full .st-key-top_add_spec_btn button {{ width: min(440px, 100%) !important; height: 40px !important; min-height: 40px !important; max-height: 40px !important; }}
+    .st-key-top_add_full .st-key-top_add_spec_btn button p {{ font-size: 1.13em !important; }}
+    /* the guide fills the rest of the window (the page itself never scrolls) */
+    .st-key-empty_site_guide {{ margin: 30px 0 0 0 !important; }}
+    .st-key-empty_site_guide iframe {{ height: calc(100vh - var(--hdr-h, 54px) - 150px) !important; min-height: 260px; }}
     .st-key-top_add_full button > div {{ justify-content: center !important; }}
     /* "Create new spectrum" and "Select all" buttons: identical height, on the same line */
     .st-key-top_add_spec_btn button,
@@ -2489,24 +2492,21 @@ PARENT_UI_JS = r'''
 
     // ------------------------------------------------------------------ help window: the "?" button right of the language switch
     // A layer under the header band with a fixed title band (two wide tabs + the X on the right, like the other windows of
-    // the site) and a scrolling body. Tab "info" (right) shows the project report (PDF, window.__muonReport, base64);
+    // the site) and a scrolling body. Tab "info" (right) shows the pages of the project report (images, window.__muonReportPages);
     // tab "guide" (left) shows the site map (HTML in the chosen language, window.__muonHelp). The last tab shown is
     // remembered; the first time, "info" opens.
     var helpEl = D.getElementById('muon-help');        // a window that is open while this script is re-installed (language switch) stays open
     var helpTab = W.__muonHelpTab;
     if (!helpTab) { try { helpTab = W.localStorage.getItem('muonHelpTab'); } catch (err) {} }
     if (helpTab !== 'guide') helpTab = 'info';
-    function reportUrl() {
-        if (W.__muonReportUrl) return W.__muonReportUrl;
-        if (!W.__muonReport) return null;
-        try {
-            var bin = W.atob(W.__muonReport), arr = new Uint8Array(bin.length);
-            for (var i = 0; i < bin.length; i++) arr[i] = bin.charCodeAt(i);
-            W.__muonReportUrl = W.URL.createObjectURL(new W.Blob([arr], { type: 'application/pdf' }));
-        } catch (err) { return null; }
-        return W.__muonReportUrl;
-    }
-    function helpClose() { if (helpEl) { if (helpEl.parentNode) helpEl.parentNode.removeChild(helpEl); helpEl = null; } }
+    function reportHtml() {
+        var pg = W.__muonReportPages;
+        if (!pg || !pg.length) return null;
+        var s = '';
+        for (var i = 0; i < pg.length; i++)
+            s += '<img class="mh-page" alt="" width="' + pg[i][0] + '" height="' + pg[i][1] + '" src="data:image/webp;base64,' + pg[i][2] + '">';
+        return s;
+    }    function helpClose() { if (helpEl) { if (helpEl.parentNode) helpEl.parentNode.removeChild(helpEl); helpEl = null; } }
     function helpOpen(tab) {
         var h = W.__muonHelp;
         if (!h) return;
@@ -2531,7 +2531,7 @@ PARENT_UI_JS = r'''
                 '#muon-help .mh-body{position:relative;flex:1 1 auto;min-height:0}' +
                 '#muon-help .mh-scroll{position:absolute;left:0;right:0;top:0;bottom:0;overflow-y:auto;padding:22px clamp(18px,4vw,60px) 36px;box-sizing:border-box}' +
                 '#muon-help .mh-scroll>.mh{max-width:1260px;margin:0 auto}' +
-                '#muon-help .mh-pdf{position:absolute;left:0;top:0;width:100%;height:100%;border:0}' +
+                '#muon-help .mh-report{background:#e2e8f0}#muon-help .mh-page{display:block;width:100%;max-width:980px;height:auto;margin:0 auto 16px auto;background:#fff;box-shadow:0 2px 10px rgba(15,23,42,.25)}' +
                 '#muon-help .mh-none{padding:30px;text-align:center;color:#475569;font:600 16px Rubik,"Segoe UI",Arial,sans-serif}' +
                 '#muon-help .mh-x{flex:0 0 30px;position:relative;width:30px;height:30px;border-radius:50%;background:#fff;border:1.8px solid #475569;cursor:pointer;box-sizing:border-box}' +
                 '#muon-help .mh-x:before,#muon-help .mh-x:after{content:"";position:absolute;left:50%;top:50%;width:25px;height:2px;margin:-1px 0 0 -12.5px;background:#1e293b}' +
@@ -2541,8 +2541,8 @@ PARENT_UI_JS = r'''
         }
         var body;
         if (helpTab === 'info') {
-            var url = reportUrl();
-            body = url ? '<iframe class="mh-pdf" src="' + url + '#view=FitH" title="' + h.tab_info + '"></iframe>' :
+            var rep = reportHtml();
+            body = rep ? '<div class="mh-scroll mh-report">' + rep + '</div>' :
                 '<div class="mh-none" dir="' + h.dir + '">' + h.no_report + '</div>';
         } else {
             body = '<div class="mh-scroll">' + h.html + '</div>';
@@ -6429,13 +6429,15 @@ if lang_choice != st.session_state.lang:
     st.rerun()
 
 @st.cache_resource
-def report_pdf_b64():
-    """The project report (report.pdf next to app.py) as base64, for the "information" tab of the help window."""
-    path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "report.pdf")
-    if not os.path.exists(path):
+def report_pages_json():
+    """The pages of the project report (report_pages.py, made from report.pdf) for the "information" tab of the help
+    window, as JSON [[width, height, base64 webp], ...]. Images, not an embedded PDF: some browsers block embedded PDFs."""
+    try:
+        import report_pages
+    except ImportError:
         return None
-    with open(path, "rb") as fh:
-        return base64.b64encode(fh.read()).decode("ascii")
+    return json.dumps([list(p) for p in report_pages.PAGES])
+
 
 # the "?" to the right of the language switch: opens the help guide (a layer drawn by the page script, see PARENT_UI_JS)
 with hdr_help:
@@ -6499,8 +6501,8 @@ with col_left:
             _labels = {k: tr(k) for k in ("create_spec_sim", "add_spectrum_top", "return_all_btn", "view_current_btn")}
             with st.container(key="empty_site_guide"):
                 # (in an iframe: st.html / st.markdown would strip the inline SVG of the map)
-                embed_html("<!DOCTYPE html><html><body style='margin:0;background:transparent'>"
-                           + help_guide.help_html("HE" if st.session_state.lang == "HE" else "EN", _labels)
+                embed_html("<!DOCTYPE html><html><body>"
+                           + help_guide.start_page_html("HE" if st.session_state.lang == "HE" else "EN", _labels)
                            + "</body></html>", 760)
 
         if top_btn_c2 is not None:
@@ -6734,10 +6736,10 @@ with col_left:
     embed_html_zero("<script>(function(){try{window.parent.__muonHelp=" + _help_json + ";}catch(e){}})();</script>", height=0)
     # the project report (PDF, ~0.8 MB) for the "information" tab: sent once per session (the page keeps it)
     if not st.session_state.get("_report_sent"):
-        _rep = report_pdf_b64()
+        _rep = report_pages_json()
         if _rep:
-            embed_html_zero("<script>(function(){try{if(!window.parent.__muonReport)window.parent.__muonReport=\""
-                            + _rep + "\";}catch(e){}})();</script>", height=0)
+            embed_html_zero("<script>(function(){try{if(!window.parent.__muonReportPages)window.parent.__muonReportPages="
+                            + _rep + ";}catch(e){}})();</script>", height=0)
         st.session_state["_report_sent"] = True
 
 
