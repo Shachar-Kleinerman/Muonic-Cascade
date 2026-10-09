@@ -1145,8 +1145,9 @@ st.markdown(f"""
         position: static !important;
     }}
     [data-testid="stHorizontalBlock"]:has(> [data-testid="stColumn"] .st-key-lang_toggle) > [data-testid="stColumn"]:nth-child(3) h3.app-title {{
-        position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); white-space: nowrap;
+        position: absolute; left: 50%; top: 50%; transform: translate(calc(-50% + var(--title-dx, 0px)), -50%); white-space: nowrap;
     }}
+    /* (--title-dx: set by centreFix in the page script, so that the middle of the title is exactly the middle of the page) */
     .st-key-font_size_slider [data-testid="stSliderThumbValue"],
     .st-key-font_size_slider [data-testid="stSliderTickBar"] {{ display: none !important; }}
     .st-key-font_size_slider .fs-icon {{ display: flex; align-items: center; justify-content: center; transform: translateY(-7px); cursor: pointer; }}
@@ -1527,6 +1528,12 @@ st.markdown(f"""
     .st-key-top_add_full [data-testid="stButton"] {{ display: flex !important; justify-content: center !important; }}
     .st-key-top_add_full .st-key-top_add_spec_btn button {{ width: min(440px, 100%) !important; height: 40px !important; min-height: 40px !important; max-height: 40px !important; }}
     .st-key-top_add_full .st-key-top_add_spec_btn button p {{ font-size: 1.13em !important; }}
+    /* the "+" stands beside the label without taking room, so the label itself is the centred part of the button
+       (centreFix in the page script then puts the middle of the label exactly in the middle of the page) */
+    .st-key-top_add_full .st-key-top_add_spec_btn button span:has(> span > [data-testid="stIconMaterial"]) {{ position: relative; }}
+    .st-key-top_add_full .st-key-top_add_spec_btn button span:has(> [data-testid="stIconMaterial"]) {{
+        position: absolute; right: calc(100% + 8px); top: 50%; transform: translateY(-50%); margin: 0 !important;
+    }}
     /* the guide fills the rest of the window (the page itself never scrolls) */
     .st-key-empty_site_guide {{ margin: 30px 0 0 0 !important; }}
     .st-key-empty_site_guide iframe {{ height: calc(100vh - var(--hdr-h, 54px) - 102px) !important; min-height: 260px; }}
@@ -2156,9 +2163,29 @@ PARENT_UI_JS = r'''
             if ((e.ctrlKey || e.metaKey) && ['+', '-', '=', '_', 'Add', 'Subtract'].indexOf(e.key) >= 0) e.preventDefault();
         }, true);
     }
+    // the middle of the site title, and of the label of the start-page create button, is exactly the middle of the page
+    // (the columns around them are not symmetric): each is shifted by the measured difference
+    function centreFix() {
+        var cx = D.documentElement.clientWidth / 2;
+        var t = D.querySelector('h3.app-title');
+        if (t) {
+            var r = t.getBoundingClientRect(), dx = parseFloat(t.style.getPropertyValue('--title-dx')) || 0;
+            var nd = dx + cx - (r.left + r.right) / 2;
+            if (r.width && Math.abs(nd - dx) > 0.25) t.style.setProperty('--title-dx', nd.toFixed(2) + 'px');
+        }
+        var p = D.querySelector('.st-key-top_add_full .st-key-top_add_spec_btn button p');
+        var wrap = p && p.closest('[data-testid="stButton"]');
+        if (wrap) {
+            var q = p.getBoundingClientRect(), m = /translateX\(([-\d.]+)px\)/.exec(wrap.style.transform), bx = m ? parseFloat(m[1]) : 0;
+            var nb = bx + cx - (q.left + q.right) / 2;
+            if (q.width && Math.abs(nb - bx) > 0.25) wrap.style.transform = 'translateX(' + nb.toFixed(2) + 'px)';
+        }
+    }
+    on(W, 'resize', centreFix);
     var zoomGuardTimer = setInterval(function () {
         var fr = D.querySelectorAll('iframe');
         for (var k = 0; k < fr.length; k++) { try { guardZoom(fr[k].contentDocument); } catch (err) {} }
+        centreFix();
     }, 500);
     cleanups.push(function () { clearInterval(zoomGuardTimer); });
     // a faded entry can be hovered (its explanation appears) but not chosen: every press on it is swallowed
