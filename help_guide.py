@@ -13,37 +13,32 @@ import help_guide_images as _img
 
 TEXT = {
     "EN": {
-        "title": "Information",
+        "tab_info": "Information",
+        "tab_guide": "Site guide",
         "close": "Close",
-        "cite": "The calculations are based on MUDIRAC:",
+        "no_report": "The project report is not available.",
         "intro": "The site simulates the X-ray cascade of a negative muon captured by an atom. The energies and the transition "
-                 "probabilities come from MUDIRAC, a solver of the radial Dirac equation (the article above). "
+                 "probabilities come from MUDIRAC, a solver of the radial Dirac equation. "
                  "The three main screens lead to each other: press the circled button to reach the screen its arrow points to.",
         "names": ["Create a spectrum", "View and compare spectra", "Interactive simulation"],
     },
     "HE": {
-        "title": "מידע",
+        "tab_info": "מידע",
+        "tab_guide": "התמצאות באתר",
         "close": "סגירה",
-        "cite": "החישובים מתבססים על MUDIRAC:",
+        "no_report": "דוח הפרויקט אינו זמין.",
         "intro": "האתר מדמה את מפל קרני ה-X של מיואון שלילי שנלכד באטום. האנרגיות והסתברויות המעברים מגיעות מ-MUDIRAC, "
-                 "פותר של משוואת דיראק הרדיאלית (המאמר שלמעלה). "
+                 "פותר של משוואת דיראק הרדיאלית. "
                  "שלושת המסכים המרכזיים מובילים זה לזה: לוחצים על הלחצן המסומן כדי להגיע למסך שאליו מצביע החץ שלו.",
         "names": ["יצירת ספקטרום", "צפייה והשוואת ספקטרומים", "סימולציה אינטראקטיבית"],
     },
 }
-
-CITATION = ("Sturniolo S, Hillier A. Mudirac: A Dirac equation solver for elemental analysis with muonic X-rays. "
-            "<i>X-Ray Spectrom.</i> 2021;50:180–196. "
-            '<a href="https://doi.org/10.1002/xrs.3212" target="_blank" rel="noopener noreferrer">https://doi.org/10.1002/xrs.3212</a>')
 
 _CSS = """<style>
 .mh{font-family:'Rubik','Segoe UI',Arial,sans-serif;color:#0f172a;line-height:1.55;font-size:15px}
 .mh h1{font-size:25px;margin:0 0 12px 0;color:#0f4c81}
 .mh p{margin:0 0 10px 0}
 .mh a{color:#0f4c81;word-break:break-all}
-.mh .cite{background:#f1f5f9;border-inline-start:4px solid #0f4c81;border-radius:6px;padding:10px 16px;margin:0 0 14px 0;font-size:16px}
-.mh .cite b{display:block;margin-bottom:2px}
-.mh .cite .en{direction:ltr;text-align:left;display:block}
 .mh .fig{margin:14px 0 6px 0;padding:10px;background:#f8fafc;border:1px solid #dbe5f0;border-radius:10px;direction:ltr}
 .mh svg{max-width:100%;height:auto;display:block;margin:0 auto}
 </style>"""
@@ -117,13 +112,12 @@ def _cycle_svg(lang, labels):
 
 
 def help_html(lang, labels):
-    """The whole guide for one language. labels: the site's own captions of the buttons (so they always match the site)."""
+    """The "site guide" (map of the three screens) for one language: intro + figure. labels: the site's own button
+    captions (so they always match the site). Used in the guide tab of the "?" window and on the empty start page."""
     lang = "HE" if lang == "HE" else "EN"
     t = TEXT[lang]
     return "".join([
         _CSS, f'<div class="mh" dir="{"rtl" if lang == "HE" else "ltr"}">',
-        f'<h1>{t["title"]}</h1>',
-        f'<div class="cite"><b>{t["cite"]}</b><span class="en">{CITATION}</span></div>',
         f'<p>{t["intro"]}</p>',
         f'<div class="fig">{_cycle_svg(lang, labels)}</div>',
         "</div>",

@@ -1,5 +1,6 @@
 import io
 import os
+import base64
 import math
 import hashlib
 import re
@@ -293,6 +294,7 @@ TRANSLATIONS = {
         "qed_help": "First-order vacuum-polarization correction (Uehling potential) to the muon-nucleus interaction.",
         "screening_label": "Electronic Screening",
         "screening_help": "Electronic background charge, using the electron configuration of the atom with Z−1.",
+        "screening_help_h": "Not available for hydrogen: the muon takes the place of the only electron, so no electrons are left (Z−1 = 0).",
         "initial_level_row_label": "Initial Level",
         "create_run": "Create",
         "update_run": "Update",
@@ -392,6 +394,7 @@ TRANSLATIONS = {
         "qed_help": "תיקון קיטוב הריק מסדר ראשון (פוטנציאל Uehling) לאינטראקציה בין המיואון לגרעין.",
         "screening_label": "מיסוך אלקטרוני",
         "screening_help": "מטען אלקטרוני ברקע, לפי ההרכב האלקטרוני של האטום עם ⁦Z−1⁩.",
+        "screening_help_h": "לא זמין במימן: המיואון תופס את מקום האלקטרון היחיד, ולכן לא נשארים אלקטרונים (⁦Z−1 = 0⁩).",
         "initial_level_row_label": "רמה התחלתית",
         "create_run": "יצירת",
         "update_run": "עדכן",
@@ -1502,6 +1505,10 @@ st.markdown(f"""
     .st-key-top_add_full {{ width: calc(100% + 0.6vw) !important; max-width: none !important; }}
     .st-key-top_add_full > * {{ width: 100% !important; }}
     .st-key-top_add_full button {{ justify-content: center !important; }}
+    /* start page: a narrower create button, centred, with the site guide under it */
+    .st-key-top_add_full [data-testid="stButton"] {{ display: flex !important; justify-content: center !important; }}
+    .st-key-top_add_full [data-testid="stButton"] button {{ width: min(380px, 100%) !important; }}
+    .st-key-empty_site_guide {{ max-width: 1100px; margin: 14px auto 0 auto !important; }}
     .st-key-top_add_full button > div {{ justify-content: center !important; }}
     /* "Create new spectrum" and "Select all" buttons: identical height, on the same line */
     .st-key-top_add_spec_btn button,
@@ -2480,41 +2487,84 @@ PARENT_UI_JS = r'''
         }
     }, { passive: false, capture: true });
 
-    // ------------------------------------------------------------------ help guide: the "?" button right of the language switch
-    // The guide (HTML in the chosen language, sent by the server in window.__muonHelp) is drawn as a layer under the header band.
-    var helpEl = D.getElementById('muon-help');        // a guide that is open while this script is re-installed (language switch) stays open
+    // ------------------------------------------------------------------ help window: the "?" button right of the language switch
+    // A layer under the header band with a fixed title band (two wide tabs + the X on the right, like the other windows of
+    // the site) and a scrolling body. Tab "info" (right) shows the project report (PDF, window.__muonReport, base64);
+    // tab "guide" (left) shows the site map (HTML in the chosen language, window.__muonHelp). The last tab shown is
+    // remembered; the first time, "info" opens.
+    var helpEl = D.getElementById('muon-help');        // a window that is open while this script is re-installed (language switch) stays open
+    var helpTab = W.__muonHelpTab;
+    if (!helpTab) { try { helpTab = W.localStorage.getItem('muonHelpTab'); } catch (err) {} }
+    if (helpTab !== 'guide') helpTab = 'info';
+    function reportUrl() {
+        if (W.__muonReportUrl) return W.__muonReportUrl;
+        if (!W.__muonReport) return null;
+        try {
+            var bin = W.atob(W.__muonReport), arr = new Uint8Array(bin.length);
+            for (var i = 0; i < bin.length; i++) arr[i] = bin.charCodeAt(i);
+            W.__muonReportUrl = W.URL.createObjectURL(new W.Blob([arr], { type: 'application/pdf' }));
+        } catch (err) { return null; }
+        return W.__muonReportUrl;
+    }
     function helpClose() { if (helpEl) { if (helpEl.parentNode) helpEl.parentNode.removeChild(helpEl); helpEl = null; } }
-    function helpOpen() {
+    function helpOpen(tab) {
         var h = W.__muonHelp;
         if (!h) return;
-        var keep = helpEl ? helpEl.querySelector('.mh-scroll').scrollTop : 0;
+        if (tab) {
+            helpTab = tab; W.__muonHelpTab = tab;
+            try { W.localStorage.setItem('muonHelpTab', tab); } catch (err) {}
+        }
+        var keep = (helpEl && helpEl.getAttribute('data-tab') === helpTab && helpEl.querySelector('.mh-scroll')) ?
+            helpEl.querySelector('.mh-scroll').scrollTop : 0;
         helpClose();
         if (!D.getElementById('muon-help-style')) {
             var stl = D.createElement('style');
             stl.id = 'muon-help-style';
             stl.textContent =
                 '#muon-help{position:fixed;left:0;right:0;bottom:0;top:var(--hdr-h,54px);z-index:1999990;background:rgba(15,23,42,.38)}' +
-                '#muon-help .mh-wrap{position:absolute;left:18px;right:18px;top:12px;bottom:12px;background:#fff;border-radius:12px;box-shadow:0 8px 30px rgba(0,0,0,.28);overflow:hidden}' +
-                '#muon-help .mh-scroll{position:absolute;left:0;right:0;top:0;bottom:0;overflow-y:auto;padding:50px clamp(18px,4vw,60px) 36px;box-sizing:border-box}' +
+                '#muon-help .mh-wrap{position:absolute;left:18px;right:18px;top:12px;bottom:12px;background:#fff;border:2px solid #334155;border-radius:12px;box-shadow:0 8px 30px rgba(0,0,0,.28);overflow:hidden;display:flex;flex-direction:column}' +
+                '#muon-help .mh-head{direction:ltr;flex:0 0 auto;display:flex;align-items:center;gap:14px;background:#e2e8f0;border-bottom:1.5px solid #94a3b8;padding:8px 16px}' +
+                '#muon-help .mh-tabs{flex:1 1 auto;display:flex;gap:12px;min-width:0}' +
+                '#muon-help .mh-tab{flex:1 1 0;text-align:center;padding:6px 10px;border-radius:8px;border:1.5px solid #64748b;background:#fff;color:#0f172a;font:700 16px Rubik,"Segoe UI",Arial,sans-serif;cursor:pointer;opacity:.42;transition:opacity .15s,box-shadow .15s,background .15s;user-select:none}' +
+                '#muon-help .mh-tab:hover,#muon-help .mh-tab:focus-visible{opacity:.85;background:#f8fafc;box-shadow:0 2px 6px rgba(15,23,42,.18);outline:none}' +
+                '#muon-help .mh-tab.on{opacity:1;box-shadow:0 1px 4px rgba(15,23,42,.18);cursor:default}' +
+                '#muon-help .mh-body{position:relative;flex:1 1 auto;min-height:0}' +
+                '#muon-help .mh-scroll{position:absolute;left:0;right:0;top:0;bottom:0;overflow-y:auto;padding:22px clamp(18px,4vw,60px) 36px;box-sizing:border-box}' +
                 '#muon-help .mh-scroll>.mh{max-width:1260px;margin:0 auto}' +
-                '#muon-help .mh-x{position:absolute;top:10px;right:14px;z-index:3;width:30px;height:30px;border-radius:50%;background:#fff;border:1.8px solid #475569;cursor:pointer;box-sizing:border-box}' +
+                '#muon-help .mh-pdf{position:absolute;left:0;top:0;width:100%;height:100%;border:0}' +
+                '#muon-help .mh-none{padding:30px;text-align:center;color:#475569;font:600 16px Rubik,"Segoe UI",Arial,sans-serif}' +
+                '#muon-help .mh-x{flex:0 0 30px;position:relative;width:30px;height:30px;border-radius:50%;background:#fff;border:1.8px solid #475569;cursor:pointer;box-sizing:border-box}' +
                 '#muon-help .mh-x:before,#muon-help .mh-x:after{content:"";position:absolute;left:50%;top:50%;width:25px;height:2px;margin:-1px 0 0 -12.5px;background:#1e293b}' +
                 '#muon-help .mh-x:before{transform:rotate(45deg)}#muon-help .mh-x:after{transform:rotate(-45deg)}' +
                 '#muon-help .mh-x:hover{background:#c1121f;border-color:#991b1b}#muon-help .mh-x:hover:before,#muon-help .mh-x:hover:after{background:#fff}';
             D.head.appendChild(stl);
         }
+        var body;
+        if (helpTab === 'info') {
+            var url = reportUrl();
+            body = url ? '<iframe class="mh-pdf" src="' + url + '#view=FitH" title="' + h.tab_info + '"></iframe>' :
+                '<div class="mh-none" dir="' + h.dir + '">' + h.no_report + '</div>';
+        } else {
+            body = '<div class="mh-scroll">' + h.html + '</div>';
+        }
         helpEl = D.createElement('div');
         helpEl.id = 'muon-help';
         helpEl.setAttribute('data-lang', h.lang);
-        helpEl.innerHTML = '<div class="mh-wrap"><div class="mh-x" tabindex="0" aria-label="' + h.close + '" title="' + h.close + '"></div>' +
-            '<div class="mh-scroll">' + h.html + '</div></div>';
+        helpEl.setAttribute('data-tab', helpTab);
+        helpEl.innerHTML = '<div class="mh-wrap"><div class="mh-head"><div class="mh-tabs">' +
+            '<div class="mh-tab' + (helpTab === 'guide' ? ' on' : '') + '" data-tab="guide" tabindex="0" role="tab" dir="' + h.dir + '">' + h.tab_guide + '</div>' +
+            '<div class="mh-tab' + (helpTab === 'info' ? ' on' : '') + '" data-tab="info" tabindex="0" role="tab" dir="' + h.dir + '">' + h.tab_info + '</div>' +
+            '</div><div class="mh-x" tabindex="0" aria-label="' + h.close + '" title="' + h.close + '"></div></div>' +
+            '<div class="mh-body">' + body + '</div></div>';
         D.body.appendChild(helpEl);
-        helpEl.querySelector('.mh-scroll').scrollTop = keep;
+        var sc = helpEl.querySelector('.mh-scroll');
+        if (sc) sc.scrollTop = keep;
     }
     on(D, 'click', function (e) {
-        var t = e.target && e.target.closest ? e.target.closest('.help-q, #muon-help .mh-x') : null;
+        var t = e.target && e.target.closest ? e.target.closest('.help-q, #muon-help .mh-x, #muon-help .mh-tab') : null;
         if (t) {
             e.preventDefault(); e.stopPropagation();
+            if (t.classList.contains('mh-tab')) { if (!t.classList.contains('on')) helpOpen(t.getAttribute('data-tab')); return; }
             if (t.classList.contains('mh-x') || helpEl) helpClose(); else helpOpen();
             return;
         }
@@ -2523,17 +2573,19 @@ PARENT_UI_JS = r'''
     on(D, 'keydown', function (e) {
         if (e.key === 'Escape' && helpEl) { helpClose(); return; }
         var t = e.target;
-        if ((e.key === 'Enter' || e.key === ' ') && t && t.classList && (t.classList.contains('help-q') || t.classList.contains('mh-x'))) {
-            e.preventDefault();
-            if (t.classList.contains('mh-x') || helpEl) helpClose(); else helpOpen();
+        if ((e.key === 'Enter' || e.key === ' ') && t && t.classList) {
+            if (t.classList.contains('mh-tab')) { e.preventDefault(); if (!t.classList.contains('on')) helpOpen(t.getAttribute('data-tab')); return; }
+            if (t.classList.contains('help-q') || t.classList.contains('mh-x')) {
+                e.preventDefault();
+                if (t.classList.contains('mh-x') || helpEl) helpClose(); else helpOpen();
+            }
         }
     }, true);
-    // the language was changed while the guide is open: show it in the new language (the server has sent the new text)
+    // the language was changed while the window is open: show it in the new language (the server has sent the new text)
     var helpTimer = setInterval(function () {
         if (helpEl && W.__muonHelp && W.__muonHelp.lang !== helpEl.getAttribute('data-lang')) helpOpen();
     }, 400);
     cleanups.push(function () { clearInterval(helpTimer); });
-
     // ------------------------------------------------------------------ thin scrollbar on the left edge of the spectra list
     // (the list scrolls with the wheel, but without a visible scrollbar: this one shows it and can be clicked / dragged)
     var SB_W = 8, SB_GAP = 6;
@@ -4072,7 +4124,19 @@ def render_dialog_body():
     with c_corr:
         with st.container(key="dlg_corr_group"):
             ep["uehling"] = st.checkbox(tr("qed_label"), value=ep["uehling"], help=tr("qed_help"), key=ueh_key)
-            ep["screening"] = st.checkbox(tr("screening_label"), value=ep["screening"], help=tr("screening_help"))
+            if ELEMENT_INFO.get(el_now, (0,))[0] <= 1:
+                # hydrogen: the muon replaces the only electron, Z-1 = 0 -> no electronic background exists (see
+                # screening_config). The box is shown unticked and disabled; the user's choice is kept for other elements.
+                # (the saved choice belongs to this editor dict only: editing another spectrum creates a new dict)
+                if st.session_state.get("_screening_before_h", (None,))[0] != id(ep):
+                    st.session_state["_screening_before_h"] = (id(ep), ep["screening"])
+                ep["screening"] = False
+                st.checkbox(tr("screening_label"), value=False, disabled=True, help=tr("screening_help_h"))
+            else:
+                saved = st.session_state.pop("_screening_before_h", None)
+                if saved and saved[0] == id(ep):
+                    ep["screening"] = saved[1]
+                ep["screening"] = st.checkbox(tr("screening_label"), value=ep["screening"], help=tr("screening_help"))
 
         # (the green button sits in the grey band of the window, see the CSS; it is created last so that it sees every setting)
         with st.container(key="dlg_green_create_btn"):
@@ -6364,9 +6428,18 @@ if lang_choice != st.session_state.lang:
     st.session_state.lang = lang_choice
     st.rerun()
 
+@st.cache_resource
+def report_pdf_b64():
+    """The project report (report.pdf next to app.py) as base64, for the "information" tab of the help window."""
+    path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "report.pdf")
+    if not os.path.exists(path):
+        return None
+    with open(path, "rb") as fh:
+        return base64.b64encode(fh.read()).decode("ascii")
+
 # the "?" to the right of the language switch: opens the help guide (a layer drawn by the page script, see PARENT_UI_JS)
 with hdr_help:
-    st.markdown(f"<div class='help-q' tabindex='0' aria-label='{tr('help_btn')}' title='{tr('help_btn')}'>?</div>",
+    st.markdown(f"<div class='help-q' tabindex='0' role='button' aria-label='{tr('help_btn')}'>?</div>",
                 unsafe_allow_html=True)
 
 
@@ -6420,6 +6493,15 @@ with col_left:
             st.session_state.editing_id = "NEW"
             st.session_state.open_dialog_flag = True
             st.rerun(scope="app")
+
+        if n_specs == 0:
+            # start page (no spectrum yet, or all deleted): the site guide of the "?" window, under the create button
+            _labels = {k: tr(k) for k in ("create_spec_sim", "add_spectrum_top", "return_all_btn", "view_current_btn")}
+            with st.container(key="empty_site_guide"):
+                # (in an iframe: st.html / st.markdown would strip the inline SVG of the map)
+                embed_html("<!DOCTYPE html><html><body style='margin:0;background:transparent'>"
+                           + help_guide.help_html("HE" if st.session_state.lang == "HE" else "EN", _labels)
+                           + "</body></html>", 760)
 
         if top_btn_c2 is not None:
             all_selected = all(s.get("visible", False) for s in st.session_state.spectra_list)
@@ -6644,9 +6726,19 @@ with col_left:
     _help_json = json.dumps({
         "lang": _help_lang, "dir": "rtl" if _help_lang == "HE" else "ltr",
         "close": help_guide.TEXT[_help_lang]["close"],
+        "tab_info": help_guide.TEXT[_help_lang]["tab_info"],
+        "tab_guide": help_guide.TEXT[_help_lang]["tab_guide"],
+        "no_report": help_guide.TEXT[_help_lang]["no_report"],
         "html": help_guide.help_html(_help_lang, _help_labels),
     }).replace("</", "<\\/")
     embed_html_zero("<script>(function(){try{window.parent.__muonHelp=" + _help_json + ";}catch(e){}})();</script>", height=0)
+    # the project report (PDF, ~0.8 MB) for the "information" tab: sent once per session (the page keeps it)
+    if not st.session_state.get("_report_sent"):
+        _rep = report_pdf_b64()
+        if _rep:
+            embed_html_zero("<script>(function(){try{if(!window.parent.__muonReport)window.parent.__muonReport=\""
+                            + _rep + "\";}catch(e){}})();</script>", height=0)
+        st.session_state["_report_sent"] = True
 
 
 with col_right:
