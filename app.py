@@ -2531,6 +2531,7 @@ PARENT_UI_JS = r'''
                 '#muon-help .mh-body{position:relative;flex:1 1 auto;min-height:0}' +
                 '#muon-help .mh-scroll{position:absolute;left:0;right:0;top:0;bottom:0;overflow-y:auto;padding:22px clamp(18px,4vw,60px) 36px;box-sizing:border-box}' +
                 '#muon-help .mh-scroll>.mh{max-width:1260px;margin:0 auto}' +
+                '#muon-help .mh-info{max-width:900px!important;font:16px/1.7 Rubik,"Segoe UI",Arial,sans-serif;color:#0f172a}#muon-help .mh-info h2{font-size:22px;color:#0f4c81;margin:6px 0 14px}#muon-help .mh-info p{margin:0 0 12px}#muon-help .mh-info .ref{margin-top:22px;padding:10px 14px;background:#f1f5f9;border-inline-start:4px solid #0f4c81;border-radius:6px;font-size:14.5px}#muon-help .mh-info a{color:#0f4c81;word-break:break-all}' +
                 '#muon-help .mh-report{background:#e2e8f0}#muon-help .mh-page{display:block;width:100%;max-width:980px;height:auto;margin:0 auto 16px auto;background:#fff;box-shadow:0 2px 10px rgba(15,23,42,.25)}' +
                 '#muon-help .mh-none{padding:30px;text-align:center;color:#475569;font:600 16px Rubik,"Segoe UI",Arial,sans-serif}' +
                 '#muon-help .mh-x{flex:0 0 30px;position:relative;width:30px;height:30px;border-radius:50%;background:#fff;border:1.8px solid #475569;cursor:pointer;box-sizing:border-box}' +
@@ -2542,7 +2543,8 @@ PARENT_UI_JS = r'''
         var body;
         if (helpTab === 'info') {
             var rep = reportHtml();
-            body = rep ? '<div class="mh-scroll mh-report">' + rep + '</div>' :
+            body = rep ? '<div class="mh-scroll mh-report">' + rep + '</div>' : h.info_html ?
+                '<div class="mh-scroll"><div class="mh mh-info" dir="' + h.dir + '">' + h.info_html + '</div></div>' :
                 '<div class="mh-none" dir="' + h.dir + '">' + h.no_report + '</div>';
         } else {
             body = '<div class="mh-scroll">' + h.html + '</div>';
@@ -6428,6 +6430,9 @@ if lang_choice != st.session_state.lang:
     st.session_state.lang = lang_choice
     st.rerun()
 
+SHOW_REPORT_PAGES = False   # True: the information tab shows the pages of the report (report_pages.py) instead of the short text
+
+
 @st.cache_resource
 def report_pages_json():
     """The pages of the project report (report_pages.py, made from report.pdf) for the "information" tab of the help
@@ -6731,11 +6736,13 @@ with col_left:
         "tab_info": help_guide.TEXT[_help_lang]["tab_info"],
         "tab_guide": help_guide.TEXT[_help_lang]["tab_guide"],
         "no_report": help_guide.TEXT[_help_lang]["no_report"],
+        "info_html": help_guide.TEXT[_help_lang]["info_html"],
         "html": help_guide.help_html(_help_lang, _help_labels),
     }).replace("</", "<\\/")
     embed_html_zero("<script>(function(){try{window.parent.__muonHelp=" + _help_json + ";}catch(e){}})();</script>", height=0)
     # the project report (PDF, ~0.8 MB) for the "information" tab: sent once per session (the page keeps it)
-    if not st.session_state.get("_report_sent"):
+    # (for now the information tab shows a short text instead: SHOW_REPORT_PAGES = False)
+    if SHOW_REPORT_PAGES and not st.session_state.get("_report_sent"):
         _rep = report_pages_json()
         if _rep:
             embed_html_zero("<script>(function(){try{if(!window.parent.__muonReportPages)window.parent.__muonReportPages="

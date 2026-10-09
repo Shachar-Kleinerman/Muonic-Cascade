@@ -17,6 +17,7 @@ TEXT = {
         "tab_guide": "Site guide",
         "close": "Close",
         "no_report": "The project report is not available.",
+        "info_html": "<h2>About the project</h2><p>When a negative muon is captured by an atom, it descends through the energy levels to the ground state and emits X-rays whose energies identify the element. The MUDIRAC code solves the radial Dirac equation and computes the energies and transition rates of these lines, but it does not compute how many muons reach each level, so it does not predict line intensities.</p><p>This site runs MUDIRAC and builds on its results a model of the muon cascade (a random chain of radiative transitions, by Monte Carlo) and the X-ray spectrum, for several assumptions on the initial state of the muon. All energies and transition rates come from MUDIRAC; settings it cannot compute are disabled.</p><p class=\"ref\">The MUDIRAC article: S. Sturniolo and A. Hillier, <i>Mudirac: A Dirac equation solver for elemental analysis with muonic X-rays</i>, X-Ray Spectrom. 50, 180&ndash;196 (2021). <a href=\"https://doi.org/10.1002/xrs.3212\" target=\"_blank\" rel=\"noopener noreferrer\">https://doi.org/10.1002/xrs.3212</a></p>",
         "intro": "The site simulates the X-ray cascade of a negative muon captured by an atom. The energies and the transition "
                  "probabilities come from MUDIRAC, a solver of the radial Dirac equation. "
                  "The three main screens lead to each other: press the circled button to reach the screen its arrow points to.",
@@ -27,6 +28,7 @@ TEXT = {
         "tab_guide": "התמצאות באתר",
         "close": "סגירה",
         "no_report": "דוח הפרויקט אינו זמין.",
+        "info_html": "<h2>על הפרויקט</h2><p>כאשר מיואון שלילי נלכד באטום, הוא יורד ברמות האנרגיה אל מצב היסוד ופולט קרני X שאנרגייתן מאפיינת את היסוד. הפותר MUDIRAC פותר את משוואת דיראק הרדיאלית ומחשב את האנרגיות ואת קצבי המעבר של הקווים האלה, אך אינו מחשב כמה מיואונים מגיעים לכל רמה, ולכן אינו מנבא את עוצמות הקווים.</p><p>האתר מריץ את MUDIRAC ומחשב על בסיס תוצאותיו את מפל המיואון (שרשרת מקרית של מעברים קרינתיים, בשיטת מונטה-קרלו) ואת ספקטרום קרני X, עבור כמה הנחות על המצב ההתחלתי של המיואון. כל האנרגיות וקצבי המעבר מגיעים מ-MUDIRAC, והגדרות שהוא אינו מסוגל לחשב מושבתות באתר.</p><p class=\"ref\">המאמר של MUDIRAC: <span dir=\"ltr\">S. Sturniolo and A. Hillier, <i>Mudirac: A Dirac equation solver for elemental analysis with muonic X-rays</i>, X-Ray Spectrom. 50, 180&ndash;196 (2021). <a href=\"https://doi.org/10.1002/xrs.3212\" target=\"_blank\" rel=\"noopener noreferrer\">https://doi.org/10.1002/xrs.3212</a></span></p>",
         "intro": "האתר מדמה את מפל קרני ה-X של מיואון שלילי שנלכד באטום. האנרגיות והסתברויות המעברים מגיעות מ-MUDIRAC, "
                  "פותר של משוואת דיראק הרדיאלית. "
                  "שלושת המסכים המרכזיים מובילים זה לזה: לוחצים על הלחצן המסומן כדי להגיע למסך שאליו מצביע החץ שלו.",
