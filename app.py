@@ -74,7 +74,7 @@ if "lang" not in st.session_state:
     st.session_state.lang = "HE"
 
 if "font_scale" not in st.session_state:
-    st.session_state.font_scale = 100
+    st.session_state.font_scale = 115   # default text size: second from the right on the slider (right = larger)
 
 if "editor_params" not in st.session_state:
     st.session_state.editor_params = {
@@ -1135,8 +1135,17 @@ st.markdown(f"""
     [data-testid="stHorizontalBlock"]:has(> [data-testid="stColumn"] .st-key-lang_toggle) > [data-testid="stColumn"] {{
         flex: 0 0 auto !important; width: auto !important; min-width: 0 !important;
     }}
-    [data-testid="stHorizontalBlock"]:has(> [data-testid="stColumn"] .st-key-lang_toggle) > [data-testid="stColumn"]:first-child {{
+    [data-testid="stHorizontalBlock"]:has(> [data-testid="stColumn"] .st-key-lang_toggle) > [data-testid="stColumn"]:nth-child(3) {{
         flex: 1 1 auto !important;
+    }}
+    /* the title stands in the middle of the whole row, whatever the widths of the two side groups */
+    [data-testid="stHorizontalBlock"]:has(> [data-testid="stColumn"] .st-key-lang_toggle) {{ position: relative; }}
+    [data-testid="stHorizontalBlock"]:has(> [data-testid="stColumn"] .st-key-lang_toggle) > [data-testid="stColumn"]:nth-child(3),
+    [data-testid="stHorizontalBlock"]:has(> [data-testid="stColumn"] .st-key-lang_toggle) > [data-testid="stColumn"]:nth-child(3) *:not(h3.app-title) {{
+        position: static !important;
+    }}
+    [data-testid="stHorizontalBlock"]:has(> [data-testid="stColumn"] .st-key-lang_toggle) > [data-testid="stColumn"]:nth-child(3) h3.app-title {{
+        position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); white-space: nowrap;
     }}
     .st-key-font_size_slider [data-testid="stSliderThumbValue"],
     .st-key-font_size_slider [data-testid="stSliderTickBar"] {{ display: none !important; }}
@@ -6396,11 +6405,11 @@ if st.session_state.open_dialog_flag or st.session_state.get("dialog_alive"):
 # ANCHORED TOP HEADER: TITLE | FONT SCALE | LANGUAGE
 # ==============================================================================
 with st.container(key="app_header"):
-    hdr_title, hdr_font, hdr_lang, hdr_help = st.columns([7.2, 0.9, 0.9, 0.62], vertical_alignment="center")
+    # left: text size + language | the title, centred on the whole row | right: the i / ? buttons (both languages)
+    hdr_font, hdr_lang, hdr_title, hdr_help = st.columns([0.9, 0.9, 7.2, 0.62], vertical_alignment="center")
 
 hdr_title.markdown(
-    f"<h3 style='margin:0; padding:0; font-size:1.75rem; font-weight:600; line-height:1.2; "
-    f"transform:translateY(-7px);'>"
+    f"<h3 class='app-title' style='margin:0; padding:0; font-size:1.75rem; font-weight:600; line-height:1.2;'>"
     # the Hebrew title reads right to left as one unit, so its last word (X) ends at the LEFT end of the sentence
     + (f"<span style='direction:rtl; unicode-bidi:isolate; display:inline-block;'>{tr('app_title')}</span>"
        if st.session_state.lang == "HE" else tr('app_title'))
@@ -6534,7 +6543,9 @@ with col_left:
             with st.container(key="empty_site_guide"):
                 # (in an iframe: st.html / st.markdown would strip the inline SVG of the map)
                 embed_html("<!DOCTYPE html><html><body>"
-                           + help_guide.start_page_html("HE" if st.session_state.lang == "HE" else "EN", _labels)
+                           + help_guide.start_page_html("HE" if st.session_state.lang == "HE" else "EN", _labels,
+                                                        tr("reset_zoom"), tr("wheel_tooltip"),
+                                                        st.session_state.font_scale / 100.0)
                            + "</body></html>", 760)
 
         if top_btn_c2 is not None:
@@ -6766,7 +6777,10 @@ with col_left:
         "info_html": help_guide.TEXT[_help_lang]["info_html"],
         "html": help_guide.help_html(_help_lang, _help_labels),
     }).replace("</", "<\\/")
-    embed_html_zero("<script>(function(){try{window.parent.__muonHelp=" + _help_json + ";}catch(e){}})();</script>", height=0)
+    # (sent once per session and language: the map holds full-resolution screenshots, ~0.9 MB; the page keeps it)
+    if st.session_state.get("_help_sent_lang") != _help_lang:
+        embed_html_zero("<script>(function(){try{window.parent.__muonHelp=" + _help_json + ";}catch(e){}})();</script>", height=0)
+        st.session_state["_help_sent_lang"] = _help_lang
     # the project report (PDF, ~0.8 MB) for the "information" tab: sent once per session (the page keeps it)
     # (for now the information tab shows a short text instead: SHOW_REPORT_PAGES = False)
     if SHOW_REPORT_PAGES and not st.session_state.get("_report_sent"):
