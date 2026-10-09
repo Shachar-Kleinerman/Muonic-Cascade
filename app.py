@@ -1118,13 +1118,11 @@ st.markdown(f"""
     [data-testid="stElementContainer"]:has(.sim-loading-marker), [data-testid="stElementContainer"]:has(.run-marker) {{ display: none !important; }}
     /* frozen copy of the create window shown while a language / text-size switch reruns the page */
     .dlg-ghost, .dlg-ghost * {{ pointer-events: none !important; animation: none !important; transition: none !important; }}
-    /* spinning atom left of the text-size slider, only while such a switch is running */
+    /* spinning atom beside the "i" button (10 px from it, on the title side), only while such a switch is running;
+       it takes no room, so nothing in the row moves */
     .st-key-font_size_slider {{ position: relative; }}
-    .st-key-font_size_slider [data-testid="stElementContainer"]:has(.hdr-atom) {{
-        position: absolute !important; right: 100%; top: 50%; width: auto !important; height: auto !important;
-        margin: 0 10px 0 0 !important; transform: translateY(-50%); line-height: 0;
-    }}
-    .hdr-atom {{ display: block; width: 22px; height: 22px; visibility: hidden; }}
+    .hdr-atom {{ display: block; width: 22px; height: 22px; visibility: hidden;
+        position: absolute; right: calc(2 * 39px + 10px + 10px); top: 50%; margin-top: -11px; }}
     body.hdr-wait .hdr-atom {{ visibility: visible; animation: atomSpin 1.2s linear infinite; }}
     /* Compact font-size slider */
     /* the text-size control stands as far from the language switch (58 px) as the language switch from the "?" button */
@@ -6453,13 +6451,6 @@ if st.session_state.get("font_slider") not in font_options:
     st.session_state["font_slider"] = st.session_state.font_scale
 with hdr_font:
     with st.container(key="font_size_slider"):
-        st.markdown(
-            "<svg class='hdr-atom' viewBox='0 0 28 28'>"
-            "<ellipse cx='14' cy='14' rx='10.5' ry='3.8' fill='none' stroke='#0f4c81' stroke-width='1.8'/>"
-            "<ellipse cx='14' cy='14' rx='10.5' ry='3.8' fill='none' stroke='#0f4c81' stroke-width='1.8' transform='rotate(60 14 14)'/>"
-            "<ellipse cx='14' cy='14' rx='10.5' ry='3.8' fill='none' stroke='#0f4c81' stroke-width='1.8' transform='rotate(120 14 14)'/>"
-            "<circle cx='14' cy='14' r='2.6' fill='#c1121f'/></svg>",
-            unsafe_allow_html=True)
         fs_minus, fs_slider, fs_plus = st.columns([1, 3.2, 1], vertical_alignment="center")
         fs_minus.markdown(
             "<div class='fs-icon fs-minus' title=''>" + _MAGNIFIER.format(sign="<path d='M7 10h6'/>") + "</div>", unsafe_allow_html=True)
@@ -6508,7 +6499,13 @@ def report_pages_json():
 # the "?" to the right of the language switch: opens the help guide (a layer drawn by the page script, see PARENT_UI_JS)
 with hdr_help:
     _hg = help_guide.TEXT["HE" if st.session_state.lang == "HE" else "EN"]
-    st.markdown(f"<div class='help-btns'><div class='help-q help-i' data-tab='info' tabindex='0' role='button' title='{_hg['tab_info']}' aria-label='{_hg['tab_info']}'>i</div>"
+    # (the spinning atom of a language / text-size switch stands beside the "i", see .hdr-atom)
+    st.markdown("<div class='help-btns'><svg class='hdr-atom' viewBox='0 0 28 28'>"
+                "<ellipse cx='14' cy='14' rx='10.5' ry='3.8' fill='none' stroke='#0f4c81' stroke-width='1.8'/>"
+                "<ellipse cx='14' cy='14' rx='10.5' ry='3.8' fill='none' stroke='#0f4c81' stroke-width='1.8' transform='rotate(60 14 14)'/>"
+                "<ellipse cx='14' cy='14' rx='10.5' ry='3.8' fill='none' stroke='#0f4c81' stroke-width='1.8' transform='rotate(120 14 14)'/>"
+                "<circle cx='14' cy='14' r='2.6' fill='#c1121f'/></svg>"
+                f"<div class='help-q help-i' data-tab='info' tabindex='0' role='button' title='{_hg['tab_info']}' aria-label='{_hg['tab_info']}'>i</div>"
                 f"<div class='help-q' data-tab='guide' tabindex='0' role='button' title='{_hg['tab_guide']}' aria-label='{_hg['tab_guide']}'>?</div></div>",
                 unsafe_allow_html=True)
 
