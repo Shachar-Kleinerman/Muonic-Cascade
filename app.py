@@ -1602,12 +1602,16 @@ st.markdown(f"""
 
     /* the "?" button of the help guide, right of the language switch */
     .help-q {{
-        width: 26px; height: 26px; border-radius: 50%; box-sizing: border-box;
+        width: 39px; height: 39px; border-radius: 50%; box-sizing: border-box;
         border: 1px solid #e2e8f0; background: #e2e8f0; color: #334155;      /* the grey of the chosen language segment */
-        font-weight: 700; font-size: 15px; line-height: 24px; text-align: center;
+        font-weight: 700; font-size: 22.5px; line-height: 37px; text-align: center;
         cursor: pointer; user-select: none; margin: 0 0 0 auto; position: relative; top: -7.5px;
     }}
     .help-q:hover, .help-q:focus-visible {{ background: #cbd5e1; border-color: #cbd5e1; outline: none; }}
+    /* two buttons: "about the project" (i) and the site guide (?) */
+    .help-btns {{ display: flex; justify-content: flex-end; gap: 10px; position: relative; top: -7.5px; direction: ltr; }}
+    .help-btns .help-q {{ margin: 0; top: 0; }}
+    .help-q.help-i {{ font-family: Georgia, 'Times New Roman', serif; font-style: italic; font-size: 24px; }}
 
     /* Language switch: two segments, the chosen one filled, the other faded (no radio dots) */
     .st-key-lang_toggle [data-testid="stRadioGroup"] {{
@@ -1618,7 +1622,8 @@ st.markdown(f"""
         border: 1px solid #e2e8f0;
         border-radius: 8px;
         padding: 1px;
-    }}
+        height: 39px; box-sizing: border-box; align-items: stretch !important;   /* = the diameter of the i / ? buttons */    }}
+    .st-key-lang_toggle label[data-testid="stRadioOption"] {{ display: flex !important; align-items: center !important; }}
     .st-key-lang_toggle label[data-testid="stRadioOption"] {{
         margin: 0 !important;
         padding: 1px 8px !important;
@@ -2524,6 +2529,7 @@ PARENT_UI_JS = r'''
                 '#muon-help{position:fixed;left:0;right:0;bottom:0;top:var(--hdr-h,54px);z-index:1999990;background:rgba(15,23,42,.38)}' +
                 '#muon-help .mh-wrap{position:absolute;left:18px;right:18px;top:12px;bottom:12px;background:#fff;border:2px solid #334155;border-radius:12px;box-shadow:0 8px 30px rgba(0,0,0,.28);overflow:hidden;display:flex;flex-direction:column}' +
                 '#muon-help .mh-head{direction:ltr;flex:0 0 auto;display:flex;align-items:center;gap:14px;background:#e2e8f0;border-bottom:1.5px solid #94a3b8;padding:8px 16px}' +
+                '#muon-help .mh-sp{flex:0 0 30px}#muon-help .mh-title{flex:1 1 auto;text-align:center;font:700 16px Rubik,"Segoe UI",Arial,sans-serif;color:#0f172a}' +
                 '#muon-help .mh-tabs{flex:1 1 auto;display:flex;gap:12px;min-width:0}' +
                 '#muon-help .mh-tab{flex:1 1 0;text-align:center;padding:6px 10px;border-radius:8px;border:1.5px solid #64748b;background:#fff;color:#0f172a;font:700 16px Rubik,"Segoe UI",Arial,sans-serif;cursor:pointer;opacity:.42;transition:opacity .15s,box-shadow .15s,background .15s;user-select:none}' +
                 '#muon-help .mh-tab:hover,#muon-help .mh-tab:focus-visible{opacity:.85;background:#f8fafc;box-shadow:0 2px 6px rgba(15,23,42,.18);outline:none}' +
@@ -2553,37 +2559,32 @@ PARENT_UI_JS = r'''
         helpEl.id = 'muon-help';
         helpEl.setAttribute('data-lang', h.lang);
         helpEl.setAttribute('data-tab', helpTab);
-        helpEl.innerHTML = '<div class="mh-wrap"><div class="mh-head"><div class="mh-tabs">' +
-            '<div class="mh-tab' + (helpTab === 'guide' ? ' on' : '') + '" data-tab="guide" tabindex="0" role="tab" dir="' + h.dir + '">' + h.tab_guide + '</div>' +
-            '<div class="mh-tab' + (helpTab === 'info' ? ' on' : '') + '" data-tab="info" tabindex="0" role="tab" dir="' + h.dir + '">' + h.tab_info + '</div>' +
-            '</div><div class="mh-x" tabindex="0" aria-label="' + h.close + '" title="' + h.close + '"></div></div>' +
+        helpEl.innerHTML = '<div class="mh-wrap"><div class="mh-head"><div class="mh-sp"></div>' +
+            '<div class="mh-title" dir="' + h.dir + '">' + (helpTab === 'info' ? h.tab_info : h.tab_guide) + '</div>' +
+            '<div class="mh-x" tabindex="0" aria-label="' + h.close + '" title="' + h.close + '"></div></div>' +
             '<div class="mh-body">' + body + '</div></div>';
         D.body.appendChild(helpEl);
         var sc = helpEl.querySelector('.mh-scroll');
         if (sc) sc.scrollTop = keep;
     }
+    // "?" opens the site guide, "i" the about-the-project window; pressing the button of the open window closes it
+    function helpToggle(t) {
+        if (t.classList.contains('mh-x')) { helpClose(); return; }
+        var tab = t.getAttribute('data-tab') || 'guide';
+        if (helpEl && helpEl.getAttribute('data-tab') === tab) helpClose(); else helpOpen(tab);
+    }
     on(D, 'click', function (e) {
-        var t = e.target && e.target.closest ? e.target.closest('.help-q, #muon-help .mh-x, #muon-help .mh-tab') : null;
-        if (t) {
-            e.preventDefault(); e.stopPropagation();
-            if (t.classList.contains('mh-tab')) { if (!t.classList.contains('on')) helpOpen(t.getAttribute('data-tab')); return; }
-            if (t.classList.contains('mh-x') || helpEl) helpClose(); else helpOpen();
-            return;
-        }
+        var t = e.target && e.target.closest ? e.target.closest('.help-q, #muon-help .mh-x') : null;
+        if (t) { e.preventDefault(); e.stopPropagation(); helpToggle(t); return; }
         if (helpEl && e.target === helpEl) helpClose();
     }, true);
     on(D, 'keydown', function (e) {
         if (e.key === 'Escape' && helpEl) { helpClose(); return; }
         var t = e.target;
-        if ((e.key === 'Enter' || e.key === ' ') && t && t.classList) {
-            if (t.classList.contains('mh-tab')) { e.preventDefault(); if (!t.classList.contains('on')) helpOpen(t.getAttribute('data-tab')); return; }
-            if (t.classList.contains('help-q') || t.classList.contains('mh-x')) {
-                e.preventDefault();
-                if (t.classList.contains('mh-x') || helpEl) helpClose(); else helpOpen();
-            }
+        if ((e.key === 'Enter' || e.key === ' ') && t && t.classList && (t.classList.contains('help-q') || t.classList.contains('mh-x'))) {
+            e.preventDefault(); helpToggle(t);
         }
-    }, true);
-    // the language was changed while the window is open: show it in the new language (the server has sent the new text)
+    }, true);    // the language was changed while the window is open: show it in the new language (the server has sent the new text)
     var helpTimer = setInterval(function () {
         if (helpEl && W.__muonHelp && W.__muonHelp.lang !== helpEl.getAttribute('data-lang')) helpOpen();
     }, 400);
@@ -6371,7 +6372,7 @@ if st.session_state.open_dialog_flag or st.session_state.get("dialog_alive"):
 # ANCHORED TOP HEADER: TITLE | FONT SCALE | LANGUAGE
 # ==============================================================================
 with st.container(key="app_header"):
-    hdr_title, hdr_font, hdr_lang, hdr_help = st.columns([7.2, 0.9, 0.9, 0.34], vertical_alignment="center")
+    hdr_title, hdr_font, hdr_lang, hdr_help = st.columns([7.2, 0.9, 0.9, 0.62], vertical_alignment="center")
 
 hdr_title.markdown(
     f"<h3 style='margin:0; padding:0; font-size:1.75rem; font-weight:600; line-height:1.2; "
@@ -6446,7 +6447,9 @@ def report_pages_json():
 
 # the "?" to the right of the language switch: opens the help guide (a layer drawn by the page script, see PARENT_UI_JS)
 with hdr_help:
-    st.markdown(f"<div class='help-q' tabindex='0' role='button' aria-label='{tr('help_btn')}'>?</div>",
+    _hg = help_guide.TEXT["HE" if st.session_state.lang == "HE" else "EN"]
+    st.markdown(f"<div class='help-btns'><div class='help-q help-i' data-tab='info' tabindex='0' role='button' title='{_hg['tab_info']}' aria-label='{_hg['tab_info']}'>i</div>"
+                f"<div class='help-q' data-tab='guide' tabindex='0' role='button' title='{_hg['tab_guide']}' aria-label='{_hg['tab_guide']}'>?</div></div>",
                 unsafe_allow_html=True)
 
 
