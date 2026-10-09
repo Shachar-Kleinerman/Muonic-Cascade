@@ -243,5 +243,26 @@ _ZOOM_JS = """<script>(function () {
   var zi = document.getElementById('zi'), zo = document.getElementById('zo'), zr = document.getElementById('zr');
   if (zi) zi.onclick = function () { centre(1.3); this.blur(); };
   if (zo) zo.onclick = function () { centre(1 / 1.3); this.blur(); };
-  if (zr) zr.onclick = function () { z = 1; vb = [X0, Y0, W, H]; show(); this.blur(); };
+  // 100 %: glides back to the whole map, like the 100 % button of the simulator (same exponential rate, 10.5 / s)
+  var anim = null;
+  function glideHome() {
+    var last = performance.now();
+    function step(now) {
+      var k = 1 - Math.exp(-10.5 * Math.min(0.05, (now - last) / 1000)); last = now;
+      var t = [X0, Y0, W, H];
+      for (var i = 0; i < 4; i++) vb[i] += (t[i] - vb[i]) * k;
+      z = W / vb[2];
+      if (Math.abs(vb[2] - W) < 0.3 && Math.abs(vb[0] - X0) < 0.3 && Math.abs(vb[1] - Y0) < 0.3) { vb = t; z = 1; anim = null; show(); return; }
+      show(); anim = requestAnimationFrame(step);
+    }
+    if (anim) cancelAnimationFrame(anim);
+    anim = requestAnimationFrame(step);
+  }
+  // any other zoom or drag stops the glide
+  function stopGlide() { if (anim) { cancelAnimationFrame(anim); anim = null; } }
+  svg.addEventListener('wheel', stopGlide, { capture: true });
+  svg.addEventListener('pointerdown', stopGlide, { capture: true });
+  if (zi) zi.addEventListener('click', stopGlide, { capture: true });
+  if (zo) zo.addEventListener('click', stopGlide, { capture: true });
+  if (zr) zr.onclick = function () { glideHome(); this.blur(); };
 })();</script>"""
